@@ -4,6 +4,116 @@ A Blinkit-style commerce client built with **Expo SDK 57** and TypeScript.
 
 Product listing with infinite scroll and debounced search, product detail with image carousel and discounted pricing, a persisted cart, offline-aware browsing, an in-app analytics event log, and a Return Policy WebView — the kind of surface area you hit shipping a real grocery app, not a toy CRUD demo.
 
+<table>
+<tr>
+<td width="50%">
+
+**Listing (dark)**  
+Grid, category chips, ADD / qty stepper.
+
+![Product listing](docs/screenshots/01-listing.png)
+
+</td>
+<td width="50%">
+
+**Listing (light)**  
+Same screen after the theme toggle.
+
+![Light mode](docs/screenshots/11-light-mode.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Loading**  
+Grid skeletons while products fetch.
+
+![Loading skeleton](docs/screenshots/02-loading.png)
+
+</td>
+<td>
+
+**Search**  
+Debounced DummyJSON search (`oil`).
+
+![Search results](docs/screenshots/03-search.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Empty search**  
+No matches for a nonsense query.
+
+![Empty search](docs/screenshots/04-empty-search.png)
+
+</td>
+<td>
+
+**Error + retry**  
+Failed fetch with a Retry action.
+
+![Error retry](docs/screenshots/05-error.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Product detail**  
+Discounted price, qty in cart, tags.
+
+![Product detail](docs/screenshots/06-detail.png)
+
+</td>
+<td>
+
+**Return Policy**  
+In-app WebView (not an external browser).
+
+![Return Policy WebView](docs/screenshots/07-webview.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Cart**  
+Persisted items, stepper, discounted subtotal.
+
+![Cart](docs/screenshots/08-cart.png)
+
+</td>
+<td>
+
+**Empty cart**
+
+![Empty cart](docs/screenshots/09-cart-empty.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Events**  
+In-app analytics log + filter pills.
+
+![Events log](docs/screenshots/10-events.png)
+
+</td>
+<td>
+
+**Offline**  
+Banner + cached first page.
+
+![Offline](docs/screenshots/12-offline.png)
+
+</td>
+</tr>
+</table>
+
 ---
 
 ## Quick start
@@ -180,120 +290,6 @@ Leave these **off** for a normal demo / review:
 > **Loom:** _[paste 2–3 min walkthrough link here]_
 
 Suggested video order: browse → search → detail → cart → return policy → events → light/dark toggle → offline.
-
----
-
-## Screenshots
-
-<table>
-<tr>
-<td width="50%">
-
-**Listing (dark)**  
-Grid, category chips, ADD / qty stepper.
-
-![Product listing](docs/screenshots/01-listing.png)
-
-</td>
-<td width="50%">
-
-**Listing (light)**  
-Same screen after the theme toggle.
-
-![Light mode](docs/screenshots/11-light-mode.png)
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Loading**  
-Grid skeletons while products fetch.
-
-![Loading skeleton](docs/screenshots/02-loading.png)
-
-</td>
-<td>
-
-**Search**  
-Debounced DummyJSON search (`oil`).
-
-![Search results](docs/screenshots/03-search.png)
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Empty search**  
-No matches for a nonsense query.
-
-![Empty search](docs/screenshots/04-empty-search.png)
-
-</td>
-<td>
-
-**Error + retry**  
-Failed fetch with a Retry action.
-
-![Error retry](docs/screenshots/05-error.png)
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Product detail**  
-Discounted price, qty in cart, tags.
-
-![Product detail](docs/screenshots/06-detail.png)
-
-</td>
-<td>
-
-**Return Policy**  
-In-app WebView (not an external browser).
-
-![Return Policy WebView](docs/screenshots/07-webview.png)
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Cart**  
-Persisted items, stepper, discounted subtotal.
-
-![Cart](docs/screenshots/08-cart.png)
-
-</td>
-<td>
-
-**Empty cart**
-
-![Empty cart](docs/screenshots/09-cart-empty.png)
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Events**  
-In-app analytics log + filter pills.
-
-![Events log](docs/screenshots/10-events.png)
-
-</td>
-<td>
-
-**Offline**  
-Banner + cached first page.
-
-![Offline](docs/screenshots/12-offline.png)
-
-</td>
-</tr>
-</table>
 
 ---
 
