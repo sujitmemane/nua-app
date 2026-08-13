@@ -170,6 +170,7 @@ Leave these **off** for a normal demo / review:
 | Flag | File | Purpose |
 | --- | --- | --- |
 | `MOCK_OFFLINE` | `src/lib/offline-mock.ts` | Fake airplane mode (banner, cache path, Query offline) |
+| `MOCK_SKELETON` | `src/lib/offline-mock.ts` | Force products grid skeleton (screenshot) |
 | `PRODUCTS_API_MOCK` | `src/features/products/services/products-mock.ts` | `'off'` \| `'400'` \| `'timeout'` for error/retry UX |
 
 ---
@@ -178,15 +179,121 @@ Leave these **off** for a normal demo / review:
 
 > **Loom:** _[paste 2–3 min walkthrough link here]_
 
-Suggested walkthrough order:
+Suggested video order: browse → search → detail → cart → return policy → events → light/dark toggle → offline.
 
-1. Browse → infinite scroll → pull to refresh  
-2. Search (type fast, show debounce) → open detail → carousel + discount  
-3. Add to cart → Cart tab → persist (kill & reopen)  
-4. Return Policy WebView  
-5. Events tab (all four event types)  
-6. Toggle dark mode  
-7. Offline (airplane or `MOCK_OFFLINE`) → banner, cached first page, blocked load-more / detail  
+---
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%">
+
+**Listing (dark)**  
+Grid, category chips, ADD / qty stepper.
+
+![Product listing](docs/screenshots/01-listing.png)
+
+</td>
+<td width="50%">
+
+**Listing (light)**  
+Same screen after the theme toggle.
+
+![Light mode](docs/screenshots/11-light-mode.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Loading**  
+Grid skeletons while products fetch.
+
+![Loading skeleton](docs/screenshots/02-loading.png)
+
+</td>
+<td>
+
+**Search**  
+Debounced DummyJSON search (`oil`).
+
+![Search results](docs/screenshots/03-search.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Empty search**  
+No matches for a nonsense query.
+
+![Empty search](docs/screenshots/04-empty-search.png)
+
+</td>
+<td>
+
+**Error + retry**  
+Failed fetch with a Retry action.
+
+![Error retry](docs/screenshots/05-error.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Product detail**  
+Discounted price, qty in cart, tags.
+
+![Product detail](docs/screenshots/06-detail.png)
+
+</td>
+<td>
+
+**Return Policy**  
+In-app WebView (not an external browser).
+
+![Return Policy WebView](docs/screenshots/07-webview.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Cart**  
+Persisted items, stepper, discounted subtotal.
+
+![Cart](docs/screenshots/08-cart.png)
+
+</td>
+<td>
+
+**Empty cart**
+
+![Empty cart](docs/screenshots/09-cart-empty.png)
+
+</td>
+</tr>
+<tr>
+<td>
+
+**Events**  
+In-app analytics log + filter pills.
+
+![Events log](docs/screenshots/10-events.png)
+
+</td>
+<td>
+
+**Offline**  
+Banner + cached first page.
+
+![Offline](docs/screenshots/12-offline.png)
+
+</td>
+</tr>
+</table>
 
 ---
 

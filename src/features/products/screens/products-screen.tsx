@@ -11,6 +11,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
 import { useNetInfo } from '@/hooks/use-net-info';
 import { useTheme } from '@/hooks/use-theme';
+import { MOCK_SKELETON } from '@/lib/offline-mock';
 import { toast } from '@/utils/toast';
 import { CategoryTabs } from '../components/category-tabs';
 import { ProductCard } from '../components/product-card';
@@ -44,6 +45,8 @@ export function ProductsScreen() {
     refetch,
     isRefetching,
   } = useProducts(debouncedSearch, category);
+
+  const showSkeleton = MOCK_SKELETON || isPending;
 
   useEffect(() => {
     if (!debouncedSearch) return;
@@ -81,14 +84,14 @@ export function ProductsScreen() {
       </View>
 
       <FlatList
-        data={products}
+        data={showSkeleton ? [] : products}
         numColumns={3}
         columnWrapperStyle={styles.row}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ProductCard product={item} />}
         contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + Spacing.four }]}
         onEndReached={() => {
-          if (isPending) return;
+          if (showSkeleton) return;
           if (!isOnline) {
             toast.error("You're offline", "Can't load more. Please connect to the internet.");
             return;
@@ -99,19 +102,20 @@ export function ProductsScreen() {
         }}
         onEndReachedThreshold={0.5}
         onRefresh={() => {
+          if (showSkeleton) return;
           if (!isOnline) {
             toast.error("You're offline", "Can't refresh. Please connect to the internet.");
             return;
           }
           refetch();
         }}
-        refreshing={isRefetching && !isPending}
+        refreshing={isRefetching && !showSkeleton}
         keyboardShouldPersistTaps="handled"
         ListFooterComponent={
           isFetchingNextPage ? <ActivityIndicator color={theme.primary} style={styles.footer} /> : null
         }
         ListEmptyComponent={
-          isPending ? (
+          showSkeleton ? (
             <ProductGridSkeleton />
           ) : isError ? (
             <ProductsErrorState
