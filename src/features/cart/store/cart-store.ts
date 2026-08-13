@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { eventsService } from '@/features/events/services/events-service';
 import type { Product } from '@/features/products/types';
 import { getDiscountedPrice } from '@/utils';
 
@@ -27,29 +28,41 @@ export const useCartStore = create<CartState>((set, get) => ({
           item.productId === product.id ? { ...item, quantity: item.quantity + qty } : item
         ),
       });
-      return;
+    } else {
+      set({
+        items: [
+          ...get().items,
+          {
+            productId: product.id,
+            title: product.title,
+            thumbnail: product.thumbnail,
+            price: product.price,
+            discountPercentage: product.discountPercentage,
+            quantity: qty,
+          },
+        ],
+      });
     }
 
-    set({
-      items: [
-        ...get().items,
-        {
-          productId: product.id,
-          title: product.title,
-          thumbnail: product.thumbnail,
-          price: product.price,
-          discountPercentage: product.discountPercentage,
-          quantity: qty,
-        },
-      ],
+    eventsService.addToCart({
+      productId: product.id,
+      title: product.title,
+      quantity: qty,
+      price: product.price,
     });
   },
 
   increment: (productId) => {
+    const existing = get().items.find((item) => item.productId === productId);
     set({
       items: get().items.map((item) =>
         item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item
       ),
+    });
+    eventsService.addToCart({
+      productId,
+      title: existing?.title,
+      quantity: 1,
     });
   },
 

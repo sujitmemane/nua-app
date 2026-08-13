@@ -1,4 +1,5 @@
 import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { selectItemQuantity, useCartStore } from '@/features/cart';
+import { eventsService } from '@/features/events';
 import { formatCurrency, getDiscountedPrice } from '@/utils';
 
 import { ProductImageCarousel } from '../components/product-image-carousel';
@@ -27,6 +29,16 @@ export function ProductDetailScreen() {
   const discountedPrice = product
     ? getDiscountedPrice(product.price, product.discountPercentage)
     : 0;
+
+  useEffect(() => {
+    if (!product) return;
+    eventsService.productViewed({
+      productId: product.id,
+      title: product.title,
+      price: product.price,
+      category: product.category,
+    });
+  }, [product?.id]);
 
   return (
     <ThemedView style={styles.container}>

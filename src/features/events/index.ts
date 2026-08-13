@@ -1,4 +1,5 @@
 export { EventsScreen } from './screens/events-screen';
-export { useEvents, useEvent, eventKeys } from './queries/use-events';
 export { eventsService } from './services/events-service';
-export type { Event } from './types';
+export { useEventsStore } from './store/events-store';
+export { useTrackAppBackground } from './hooks/use-track-app-background';
+export type { AnalyticsEvent, AnalyticsEventType, AnalyticsMetadata } from './types';

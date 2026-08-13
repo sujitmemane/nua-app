@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,6 +6,7 @@ import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { eventsService } from '@/features/events';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
 import { ProductCard } from '../components/product-card';
@@ -27,6 +28,11 @@ export function ProductsScreen() {
     refetch,
     isRefetching,
   } = useProducts(debouncedSearch);
+
+  useEffect(() => {
+    if (!debouncedSearch) return;
+    eventsService.searchPerformed({ query: debouncedSearch });
+  }, [debouncedSearch]);
 
   return (
     <ThemedView style={styles.container}>

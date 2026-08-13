@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -6,39 +6,36 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 
 import { EventCard } from '../components/event-card';
-import { useEvents } from '../queries/use-events';
+import { useEventsStore } from '../store/events-store';
 
 export function EventsScreen() {
   const insets = useSafeAreaInsets();
-  const { data: events, isPending, isError, error } = useEvents();
+  const events = useEventsStore((state) => state.events);
+  const clear = useEventsStore((state) => state.clear);
 
   return (
     <ThemedView style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.four }]}>
+        <ThemedText type="subtitle">Events</ThemedText>
+        {events.length > 0 ? (
+          <Pressable onPress={clear} style={({ pressed }) => pressed && styles.pressed}>
+            <ThemedText type="linkPrimary">Clear</ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
+
       <FlatList
         data={events}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <EventCard event={item} />}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + Spacing.four, paddingBottom: BottomTabInset + Spacing.four },
+          { paddingBottom: BottomTabInset + Spacing.four },
         ]}
-        ListHeaderComponent={
-          <ThemedText type="subtitle" style={styles.title}>
-            Events
-          </ThemedText>
-        }
         ListEmptyComponent={
-          isPending ? (
-            <ActivityIndicator style={styles.state} />
-          ) : isError ? (
-            <ThemedText themeColor="textSecondary" style={styles.state}>
-              {error.message}
-            </ThemedText>
-          ) : (
-            <ThemedText themeColor="textSecondary" style={styles.state}>
-              No events yet.
-            </ThemedText>
-          )
+          <ThemedText themeColor="textSecondary" style={styles.empty}>
+            No tracked events yet. Open a product, search, add to cart, or background the app.
+          </ThemedText>
         }
       />
     </ThemedView>
@@ -49,6 +46,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   content: {
     gap: Spacing.three,
     paddingHorizontal: Spacing.four,
@@ -56,11 +63,11 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
-  title: {
-    marginBottom: Spacing.two,
-  },
-  state: {
+  empty: {
     textAlign: 'center',
     marginTop: Spacing.five,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

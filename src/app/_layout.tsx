@@ -4,12 +4,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { useTrackAppBackground } from '@/features/events/hooks/use-track-app-background';
 import { queryClient } from '@/lib/query-client';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  useTrackAppBackground();
 
   return (
     <QueryClientProvider client={queryClient}>
