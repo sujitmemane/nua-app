@@ -1,10 +1,14 @@
+import { AxiosError } from 'axios';
+
+import { MOCK_OFFLINE } from '@/lib/offline-mock';
 import { apiClient } from '@/services';
 
 import type { Product, ProductCategory, ProductsResponse } from '../types';
 import { isDefaultFirstPage, loadFirstPage, saveFirstPage } from './products-cache';
 import { applyProductsMock, PRODUCTS_API_MOCK } from './products-mock';
 
-const PRODUCTS_ENDPOINT = 'https://dummyjson.com/products';
+const PRODUCTS_ENDPOINT =
+  process.env.EXPO_PUBLIC_PRODUCTS_URL ?? 'https://dummyjson.com/products';
 
 export const ALL_CATEGORY = 'all';
 
@@ -16,10 +20,6 @@ export interface GetProductsParams {
   signal?: AbortSignal;
 }
 
-/**
- * Data access for the products feature, backed by the dummyjson API.
- * Absolute URLs are used so this works regardless of the shared axios baseURL.
- */
 export const productsService = {
   async getCategories(signal?: AbortSignal): Promise<ProductCategory[]> {
     const { data } = await apiClient.get<ProductCategory[]>(`${PRODUCTS_ENDPOINT}/categories`, {
@@ -35,17 +35,38 @@ export const productsService = {
     category = ALL_CATEGORY,
     signal,
   }: GetProductsParams = {}): Promise<ProductsResponse> {
-    const endpoint = search
-      ? `${PRODUCTS_ENDPOINT}/search`
-      : category && category !== ALL_CATEGORY
-        ? `${PRODUCTS_ENDPOINT}/category/${category}`
-        : PRODUCTS_ENDPOINT;
+    const hasSearch = Boolean(search);
+    const hasCategory = Boolean(category && category !== ALL_CATEGORY);
 
     try {
       await applyProductsMock(PRODUCTS_API_MOCK, signal);
 
+      if (MOCK_OFFLINE) {
+        throw new AxiosError('Network Error', AxiosError.ERR_NETWORK);
+      }
+
+      if (hasSearch && hasCategory) {
+        const { data } = await apiClient.get<ProductsResponse>(`${PRODUCTS_ENDPOINT}/search`, {
+          params: { q: search, limit: 0 },
+          signal,
+        });
+        const products = data.products.filter((product) => product.category === category);
+        return {
+          products,
+          total: products.length,
+          skip: 0,
+          limit: products.length,
+        };
+      }
+
+      const endpoint = hasSearch
+        ? `${PRODUCTS_ENDPOINT}/search`
+        : hasCategory
+          ? `${PRODUCTS_ENDPOINT}/category/${category}`
+          : PRODUCTS_ENDPOINT;
+
       const { data } = await apiClient.get<ProductsResponse>(endpoint, {
-        params: search ? { q: search, limit, skip } : { limit, skip },
+        params: hasSearch ? { q: search, limit, skip } : { limit, skip },
         signal,
       });
 

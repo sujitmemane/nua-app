@@ -44,7 +44,6 @@ export interface Product {
   thumbnail: string;
 }
 
-/** Shape returned by the dummyjson `/products` list endpoint. */
 export interface ProductsResponse {
   products: Product[];
   total: number;

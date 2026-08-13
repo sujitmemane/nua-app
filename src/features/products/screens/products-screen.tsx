@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConnectionBanner } from '@/components/connection-banner';
 import { SearchBar } from '@/components/search-bar';
@@ -26,7 +25,6 @@ import { useCategories, useProducts } from '../queries/use-products';
 import { ALL_CATEGORY } from '../services/products-service';
 
 export function ProductsScreen() {
-  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(ALL_CATEGORY);
   const debouncedSearch = useDebouncedValue(search.trim(), 400);
@@ -54,16 +52,12 @@ export function ProductsScreen() {
 
   function handleSelectCategory(next: string) {
     setCategory(next);
-    if (search) setSearch('');
   }
 
   return (
     <ThemedView style={styles.container}>
-      <View
-        style={[
-          styles.headerBlock,
-          { backgroundColor: headerTheme.background, paddingTop: insets.top + Spacing.two },
-        ]}>
+      <ConnectionBanner headerColor={headerTheme.background} />
+      <View style={[styles.headerBlock, { backgroundColor: headerTheme.background }]}>
         <View style={styles.headerInner}>
           <ProductsHeader theme={headerTheme} />
           <SearchBar
@@ -76,7 +70,6 @@ export function ProductsScreen() {
             borderColor="transparent"
           />
         </View>
-        <ConnectionBanner />
         <CategoryTabs
           categories={categories}
           selected={category}
@@ -135,7 +128,9 @@ export function ProductsScreen() {
           ) : (
             <ThemedText themeColor="textSecondary" style={styles.state}>
               {debouncedSearch
-                ? `No products found for “${debouncedSearch}”.`
+                ? category !== ALL_CATEGORY
+                  ? `No products found for “${debouncedSearch}” in this category.`
+                  : `No products found for “${debouncedSearch}”.`
                 : 'No products yet.'}
             </ThemedText>
           )
@@ -151,6 +146,7 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     width: '100%',
+    paddingTop: Spacing.two,
     paddingBottom: Spacing.one,
   },
   headerInner: {

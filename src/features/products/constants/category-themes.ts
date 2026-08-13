@@ -12,7 +12,6 @@ export interface CategoryHeaderTheme {
   underline: string;
 }
 
-/** Solid header wash with white type — Blinkit-style category theming. */
 function makeSolidTheme(background: string): CategoryHeaderTheme {
   return {
     background,

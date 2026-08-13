@@ -3,12 +3,17 @@ import { onlineManager, QueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 
 import { isNetOnline } from '@/hooks/use-net-info';
+import { MOCK_OFFLINE } from '@/lib/offline-mock';
 
 onlineManager.setEventListener((setOnline) =>
   NetInfo.addEventListener((state) => {
     setOnline(isNetOnline(state));
   })
 );
+
+if (MOCK_OFFLINE) {
+  onlineManager.setOnline(false);
+}
 
 const MAX_RETRIES = 5;
 

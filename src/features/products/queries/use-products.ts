@@ -28,7 +28,7 @@ export function useProducts(search = '', category = ALL_CATEGORY) {
         limit: PAGE_SIZE,
         skip: pageParam,
         search,
-        category: search ? ALL_CATEGORY : category,
+        category,
         signal,
       }),
     getNextPageParam: (lastPage) => {
