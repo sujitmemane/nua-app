@@ -1,56 +1,206 @@
-# Welcome to your Expo app 👋
+# Nua
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A Blinkit-style commerce client built with **Expo SDK 57** and TypeScript.
 
-## Get started
+Product listing with infinite scroll and debounced search, product detail with image carousel and discounted pricing, a persisted cart, offline-aware browsing, an in-app analytics event log, and a Return Policy WebView — the kind of surface area you hit shipping a real grocery app, not a toy CRUD demo.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Quick start
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env   # optional — DummyJSON is the default
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+| Command | What it does |
+| --- | --- |
+| `npx expo start` | Dev server (iOS / Android / Expo Go / web) |
+| `npm test` | Unit tests (includes the search race-condition case) |
+| `npm run lint` | ESLint via `expo lint` |
 
-### Other setup steps
+**Requirements:** Node 20+, Expo Go or a simulator.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Optional env:
 
-## Learn more
+```bash
+EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Assignment coverage
 
-## Join the community
+| Requirement | Status | Where it lives |
+| --- | --- | --- |
+| Paginated DummyJSON listing | Done | `products-service` + `useInfiniteQuery` |
+| Infinite scroll (no Load More) | Done | `ProductsScreen` `onEndReached` |
+| Debounced search → `/products/search?q=` | Done | `useDebouncedValue` (400ms) |
+| Product detail + image carousel | Done | `ProductDetailScreen` + `ProductImageCarousel` |
+| Discounted price from `discountPercentage` | Done | `getDiscountedPrice` |
+| Cart (Zustand) | Done | `features/cart` |
+| Cart → AsyncStorage | Done | Zustand `persist` (`nua-cart`) |
+| Return Policy WebView | Done | `/return-policy` |
+| Analytics: 4 events + metadata | Done | Events tab + `eventsService` |
+| Offline support | Done | NetInfo banner, first-page cache, guarded actions |
+| **Bonus** retry + exponential backoff | Done | `lib/query-client.ts` |
+| **Bonus** pull-to-refresh vs pagination | Done | `onRefresh` / `fetchNextPage` separated |
+| **Bonus** dark mode + persist | Done | `theme-store` (`nua-theme`) |
+| **Bonus** search race-condition test | Done | `use-products-search-race-test.ts` |
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Architecture
+
+```
+src/
+├── app/                  # Expo Router only — thin route shells
+├── features/
+│   ├── products/         # list, detail, search, cache, WebView
+│   ├── cart/             # Zustand store + cart UI
+│   └── events/           # analytics store, AppState listener, log UI
+├── components/           # shared UI (tabs, banner, toast, themed primitives)
+├── hooks/                # net info, debounce, theme colors
+├── lib/                  # QueryClient, offline mock flag
+├── services/             # shared axios client
+└── theme/                # palette, typography, theme store
+```
+
+**Server state → TanStack Query.** Products are remote, paginated, and staleable. Query owns caching, retries, abort, and infinite pages.
+
+**Client state → Zustand.** Cart, theme preference, and the analytics log are local, sync, and (for cart/theme) persisted. No provider spaghetti; stores can be called from hooks *or* plain services via `getState()`.
+
+**Routes stay thin.** `src/app/**` re-exports feature screens. Business logic never lives in the router tree.
+
+---
+
+## Design decisions
+
+### Why Zustand (not Context / Redux)
+
+| | Context | Redux | Zustand (chosen) |
+| --- | --- | --- | --- |
+| Boilerplate | Low | High | Low |
+| Re-renders | Easy to over-subscribe | Fine with selectors | Fine with selectors |
+| Call from a non-React service | Awkward | Possible | Natural (`getState()`) |
+| Persist to AsyncStorage | Manual | Extra package | Built-in middleware |
+
+Cart mutations also fire `add_to_cart` from the store itself — analytics stays next to the action, not scattered across screens.
+
+### Search race condition
+
+Fast typing without guards = overlapping DummyJSON requests. A slow earlier response can land *after* a newer one and flash the wrong list.
+
+**Mitigation (two layers):**
+
+1. **Debounce (400ms)** — don’t hit the network on every keystroke.
+2. **AbortSignal** — `useInfiniteQuery` keys on `search`; when the key changes, TanStack Query aborts the previous `queryFn`. That signal is forwarded into axios so the in-flight HTTP call is cancelled, not just ignored in UI state.
+
+Covered by `npm test` — a stale `"a"` request is aborted; `"iphone"` wins.
+
+### Offline
+
+- Connectivity uses **`isConnected !== false`** only. Relying on `isInternetReachable` false-positives offline on iOS Simulator.
+- Query `networkMode: 'offlineFirst'` so `queryFn` still runs offline and can serve the **first-page AsyncStorage cache**.
+- Offline: connection banner, toast on load-more / refresh / retry, product detail navigation blocked. Cart add/remove still works (local state).
+
+### Retries
+
+Failed queries retry with exponential backoff (`1s → 2s → 4s…` capped at 8s). **4xx is not retried** — those are client errors, not transient network flakes.
+
+### DummyJSON quirks
+
+There is no combined `search + category` endpoint. When both are set, the app searches with `limit=0` and filters by `category` client-side. Documented here so reviewers don’t assume a missing API.
+
+---
+
+## Features in more detail
+
+### Products
+
+- Paginated fetch (`limit` / `skip`), infinite scroll, pull-to-refresh
+- Category chips with themed headers
+- Skeleton loading, empty states, error + retry
+- Detail: carousel, brand/category, discounted + strikethrough price, tags, reviews, return-policy link
+
+### Cart
+
+- Add / increment / decrement from list and detail
+- Persisted across restarts (`nua-cart`)
+- Subtotal uses discounted unit prices; “saved” amount vs list price
+
+### Analytics (in-app Events tab)
+
+| Event | Fired when |
+| --- | --- |
+| `product_viewed` | Product detail mounts with data |
+| `add_to_cart` | Cart store add / increment |
+| `search_performed` | Debounced search query changes |
+| `app_backgrounded` | `AppState` → `background` (root layout) |
+
+Each event stores `id`, `type`, `metadata`, and `createdAt` (ISO). Filter pills on the Events screen.
+
+### Theme
+
+Light / dark preference in Zustand, persisted, and synced to `Appearance.setColorScheme` so native chrome (status bar, tabs) follows the toggle — not only JS-painted surfaces.
+
+---
+
+## Testing
+
+```bash
+npm test
+```
+
+Jest via [`jest-expo`](https://docs.expo.dev/develop/unit-testing/) (Expo SDK 57).
+
+The race-condition test mocks axios + AsyncStorage and asserts:
+
+- aborting the stale search rejects with cancel
+- the newer search resolves to the correct products
+- the aborted request never “wins”
+
+---
+
+## Dev-only flags
+
+Leave these **off** for a normal demo / review:
+
+| Flag | File | Purpose |
+| --- | --- | --- |
+| `MOCK_OFFLINE` | `src/lib/offline-mock.ts` | Fake airplane mode (banner, cache path, Query offline) |
+| `PRODUCTS_API_MOCK` | `src/features/products/services/products-mock.ts` | `'off'` \| `'400'` \| `'timeout'` for error/retry UX |
+
+---
+
+## Demo
+
+> **Loom:** _[paste 2–3 min walkthrough link here]_
+
+Suggested walkthrough order:
+
+1. Browse → infinite scroll → pull to refresh  
+2. Search (type fast, show debounce) → open detail → carousel + discount  
+3. Add to cart → Cart tab → persist (kill & reopen)  
+4. Return Policy WebView  
+5. Events tab (all four event types)  
+6. Toggle dark mode  
+7. Offline (airplane or `MOCK_OFFLINE`) → banner, cached first page, blocked load-more / detail  
+
+---
+
+## What I’d improve with more time
+
+- Broader test suite: debounce hook, backoff policy, cart persist round-trip
+- Product detail error/retry parity with the list screen
+- Persist analytics events (currently in-memory)
+- Real checkout / order placement (Checkout is UI-only today)
+- Maestro E2E for search → detail → cart → background
+- Tighter commit history before a production PR
+
+---
+
+## Stack
+
+Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · TanStack Query · Axios · Zustand · AsyncStorage · NetInfo · react-native-webview · jest-expo
