@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { selectItemQuantity, useCartStore } from '@/features/cart';
 import { formatCurrency, getDiscountedPrice } from '@/utils';
 
 import { ProductImageCarousel } from '../components/product-image-carousel';
@@ -17,6 +18,10 @@ export function ProductDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string }>();
   const id = Number(idParam);
   const { data: product, isPending, isError, error } = useProduct(id);
+  const addItem = useCartStore((state) => state.addItem);
+  const increment = useCartStore((state) => state.increment);
+  const decrement = useCartStore((state) => state.decrement);
+  const quantityInCart = useCartStore(selectItemQuantity(Number.isFinite(id) ? id : 0));
 
   const contentWidth = Math.min(windowWidth, MaxContentWidth) - Spacing.four * 2;
   const discountedPrice = product
@@ -70,6 +75,37 @@ export function ProductDetailScreen() {
               ★ {product.rating.toFixed(1)} · {product.availabilityStatus} · {product.stock} in
               stock
             </ThemedText>
+
+            {quantityInCart > 0 ? (
+              <View style={styles.cartRow}>
+                <View style={styles.stepper}>
+                  <Pressable
+                    onPress={() => decrement(product.id)}
+                    style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}>
+                    <ThemedText type="default">−</ThemedText>
+                  </Pressable>
+                  <ThemedText type="smallBold">{quantityInCart} in cart</ThemedText>
+                  <Pressable
+                    onPress={() => increment(product.id)}
+                    style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}>
+                    <ThemedText type="default">+</ThemedText>
+                  </Pressable>
+                </View>
+                <Link href="/cart" asChild>
+                  <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                    <ThemedText type="linkPrimary">View cart</ThemedText>
+                  </Pressable>
+                </Link>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => addItem(product, product.minimumOrderQuantity || 1)}
+                style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
+                <ThemedView type="backgroundSelected" style={styles.addButtonInner}>
+                  <ThemedText type="smallBold">Add to cart</ThemedText>
+                </ThemedView>
+              </Pressable>
+            )}
           </View>
 
           <ThemedText type="default">{product.description}</ThemedText>
@@ -176,6 +212,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     flexWrap: 'wrap',
+  },
+  cartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  stepButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButton: {
+    marginTop: Spacing.one,
+    alignSelf: 'flex-start',
+  },
+  addButtonInner: {
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.three,
   },
   originalPrice: {
     textDecorationLine: 'line-through',

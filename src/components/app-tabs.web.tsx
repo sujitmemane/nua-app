@@ -27,6 +27,9 @@ export default function AppTabs() {
           <TabTrigger name="events" href="/events" asChild>
             <TabButton>Events</TabButton>
           </TabTrigger>
+          <TabTrigger name="cart" href="/cart" asChild>
+            <TabButton>Cart</TabButton>
+          </TabTrigger>
         </CustomTabList>
       </TabList>
     </Tabs>
