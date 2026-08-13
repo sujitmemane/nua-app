@@ -111,7 +111,7 @@ export function ProductDetailScreen() {
               </View>
             ) : (
               <Pressable
-                onPress={() => addItem(product, product.minimumOrderQuantity || 1)}
+                onPress={() => addItem(product, 1)}
                 style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
                 <ThemedView type="backgroundSelected" style={styles.addButtonInner}>
                   <ThemedText type="smallBold">Add to cart</ThemedText>

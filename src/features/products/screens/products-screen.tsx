@@ -9,6 +9,7 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { eventsService } from '@/features/events';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
+import { useCartStore } from '@/features/cart';
 import { ProductCard } from '../components/product-card';
 import { useProducts } from '../queries/use-products';
 
@@ -16,6 +17,8 @@ export function ProductsScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 400);
+
+  const cartItems = useCartStore((state) => state.items);
 
   const {
     data: products,
@@ -28,6 +31,10 @@ export function ProductsScreen() {
     refetch,
     isRefetching,
   } = useProducts(debouncedSearch);
+
+
+
+  console.log(cartItems,"CART_ITEMS");
 
   useEffect(() => {
     if (!debouncedSearch) return;
@@ -45,6 +52,8 @@ export function ProductsScreen() {
 
       <FlatList
         data={products}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ProductCard product={item} />}
         contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + Spacing.four }]}
@@ -92,11 +101,14 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: Spacing.three,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
+  },
+  row: {
+    gap: Spacing.three,
   },
   state: {
     textAlign: 'center',

@@ -59,6 +59,10 @@ export const useCartStore = create<CartState>((set, get) => ({
         item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item
       ),
     });
+   if(existing){
+
+   }
+
     eventsService.addToCart({
       productId,
       title: existing?.title,
@@ -91,6 +95,11 @@ export const useCartStore = create<CartState>((set, get) => ({
 
 export function selectCartCount(state: CartState) {
   return state.items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+
+export function allCartItems(state: CartState) {
+  return state.items;
 }
 
 export function selectCartSubtotal(state: CartState) {
