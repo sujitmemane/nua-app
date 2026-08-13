@@ -11,9 +11,12 @@ import { eventsService } from '@/features/events';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
 import { useNetInfo } from '@/hooks/use-net-info';
+import { useTheme } from '@/hooks/use-theme';
 import { toast } from '@/utils/toast';
 import { CategoryTabs } from '../components/category-tabs';
 import { ProductCard } from '../components/product-card';
+import { ProductGridSkeleton } from '../components/product-card-skeleton';
+import { ProductsErrorState } from '../components/products-error-state';
 import { ProductsHeader } from '../components/products-header';
 import {
   getCategoryHeaderTheme,
@@ -28,6 +31,7 @@ export function ProductsScreen() {
   const [category, setCategory] = useState(ALL_CATEGORY);
   const debouncedSearch = useDebouncedValue(search.trim(), 400);
   const headerTheme = getCategoryHeaderTheme(category);
+  const theme = useTheme();
   const { isOnline } = useNetInfo();
 
   const { data: categories = [] } = useCategories();
@@ -91,6 +95,7 @@ export function ProductsScreen() {
         renderItem={({ item }) => <ProductCard product={item} />}
         contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + Spacing.four }]}
         onEndReached={() => {
+          if (isPending) return;
           if (!isOnline) {
             toast.error("You're offline", "Can't load more. Please connect to the internet.");
             return;
@@ -107,16 +112,26 @@ export function ProductsScreen() {
           }
           refetch();
         }}
-        refreshing={isRefetching}
+        refreshing={isRefetching && !isPending}
         keyboardShouldPersistTaps="handled"
-        ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={styles.state} /> : null}
+        ListFooterComponent={
+          isFetchingNextPage ? <ActivityIndicator color={theme.primary} style={styles.footer} /> : null
+        }
         ListEmptyComponent={
           isPending ? (
-            <ActivityIndicator style={styles.state} />
+            <ProductGridSkeleton />
           ) : isError ? (
-            <ThemedText themeColor="textSecondary" style={styles.state}>
-              {error.message}
-            </ThemedText>
+            <ProductsErrorState
+              offline={!isOnline}
+              retrying={isRefetching}
+              onRetry={() => {
+                if (!isOnline) {
+                  toast.error("You're offline", 'Connect to the internet and try again.');
+                  return;
+                }
+                refetch();
+              }}
+            />
           ) : (
             <ThemedText themeColor="textSecondary" style={styles.state}>
               {debouncedSearch
@@ -160,5 +175,8 @@ const styles = StyleSheet.create({
   state: {
     textAlign: 'center',
     marginTop: Spacing.five,
+  },
+  footer: {
+    marginVertical: Spacing.three,
   },
 });

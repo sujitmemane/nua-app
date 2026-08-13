@@ -2,6 +2,7 @@ import { apiClient } from '@/services';
 
 import type { Product, ProductCategory, ProductsResponse } from '../types';
 import { isDefaultFirstPage, loadFirstPage, saveFirstPage } from './products-cache';
+import { applyProductsMock, PRODUCTS_API_MOCK } from './products-mock';
 
 const PRODUCTS_ENDPOINT = 'https://dummyjson.com/products';
 
@@ -37,6 +38,8 @@ export const productsService = {
         : PRODUCTS_ENDPOINT;
 
     try {
+      await applyProductsMock(PRODUCTS_API_MOCK);
+
       const { data } = await apiClient.get<ProductsResponse>(endpoint, {
         params: search ? { q: search, limit, skip } : { limit, skip },
       });
@@ -47,6 +50,7 @@ export const productsService = {
 
       return data;
     } catch (error) {
+      if (PRODUCTS_API_MOCK !== 'off') throw error;
       if (!isDefaultFirstPage(search, category, skip)) throw error;
 
       const cached = await loadFirstPage();

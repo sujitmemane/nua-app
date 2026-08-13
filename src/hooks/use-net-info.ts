@@ -1,5 +1,12 @@
-import { useNetInfo as useNetInfoState } from '@react-native-community/netinfo';
+import {
+  useNetInfo as useNetInfoState,
+  type NetInfoState,
+} from '@react-native-community/netinfo';
 
+
+export function isNetOnline(state: Pick<NetInfoState, 'isConnected'>) {
+  return state.isConnected !== false;
+}
 
 export function useNetInfo() {
   const state = useNetInfoState();
@@ -8,6 +15,6 @@ export function useNetInfo() {
     type: state.type,
     isConnected: state.isConnected,
     isInternetReachable: state.isInternetReachable,
-    isOnline: state.isConnected !== false && state.isInternetReachable !== false,
+    isOnline: isNetOnline(state),
   };
 }
