@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, colors } from '@/constants/theme';
 import { selectCartCount, useCartStore } from '@/features/cart';
+import { useThemeStore } from '@/theme/theme-store';
 
 import type { CategoryHeaderTheme } from '../constants/category-themes';
 
@@ -14,6 +15,9 @@ interface ProductsHeaderProps {
 
 export function ProductsHeader({ theme }: ProductsHeaderProps) {
   const cartCount = useCartStore(selectCartCount);
+  const preference = useThemeStore((state) => state.preference);
+  const toggleTheme = useThemeStore((state) => state.toggle);
+  const isDark = preference === 'dark';
 
   return (
     <View style={styles.row}>
@@ -22,10 +26,27 @@ export function ProductsHeader({ theme }: ProductsHeaderProps) {
       </ThemedText>
 
       <View style={styles.actions}>
+        <Pressable
+          hitSlop={8}
+          onPress={toggleTheme}
+          style={({ pressed }) => [styles.iconHit, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
+          <SymbolView
+            name={
+              isDark
+                ? { ios: 'sun.max.fill', android: 'light_mode', web: 'light_mode' }
+                : { ios: 'moon.fill', android: 'dark_mode', web: 'dark_mode' }
+            }
+            size={22}
+            tintColor={theme.foreground}
+          />
+        </Pressable>
+
         <Link href="/cart" asChild>
           <Pressable
             hitSlop={8}
-            style={({ pressed }) => [styles.cartHit, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.iconHit, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Cart">
             <SymbolView
@@ -80,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.three,
   },
-  cartHit: {
+  iconHit: {
     width: 32,
     height: 32,
     alignItems: 'center',

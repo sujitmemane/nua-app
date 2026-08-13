@@ -4,13 +4,12 @@
  */
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeStore } from '@/theme/theme-store';
 
 export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
+  const preference = useThemeStore((state) => state.preference);
 
-  return Colors[theme];
+  return Colors[preference];
 }
 
 export type AppTheme = ReturnType<typeof useTheme>;

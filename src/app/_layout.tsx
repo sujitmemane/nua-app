@@ -2,18 +2,18 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Toast, toastConfig } from '@/components/toast-config';
 import { useTrackAppBackground } from '@/features/events/hooks/use-track-app-background';
 import { queryClient } from '@/lib/query-client';
+import { useThemeStore } from '@/theme/theme-store';
 import { useLoadFonts } from '@/theme/use-load-fonts';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useThemeStore((state) => state.preference);
   const [fontsLoaded, fontError] = useLoadFonts();
   useTrackAppBackground();
 

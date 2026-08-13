@@ -3,3 +3,5 @@ export type { PaletteColor, ThemeColor } from './colors';
 export { fontFamily, typography } from './typography';
 export type { TypographyToken } from './typography';
 export { useLoadFonts } from './use-load-fonts';
+export { useThemeStore } from './theme-store';
+export type { ThemePreference } from './theme-store';
