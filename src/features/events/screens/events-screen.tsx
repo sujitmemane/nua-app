@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,12 +7,21 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 
 import { EventCard } from '../components/event-card';
+import { EventFilterPills } from '../components/event-filter-pills';
+import { EVENT_TYPE_LABELS } from '../constants';
 import { useEventsStore } from '../store/events-store';
+import type { AnalyticsEventType } from '../types';
 
 export function EventsScreen() {
   const insets = useSafeAreaInsets();
   const events = useEventsStore((state) => state.events);
   const clear = useEventsStore((state) => state.clear);
+  const [filter, setFilter] = useState<AnalyticsEventType | null>(null);
+
+  const visibleEvents = useMemo(
+    () => (filter ? events.filter((event) => event.type === filter) : events),
+    [events, filter]
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -24,8 +34,10 @@ export function EventsScreen() {
         ) : null}
       </View>
 
+      <EventFilterPills selected={filter} onSelect={setFilter} />
+
       <FlatList
-        data={events}
+        data={visibleEvents}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <EventCard event={item} />}
         contentContainerStyle={[
@@ -34,7 +46,9 @@ export function EventsScreen() {
         ]}
         ListEmptyComponent={
           <ThemedText themeColor="textSecondary" style={styles.empty}>
-            No tracked events yet. Open a product, search, add to cart, or background the app.
+            {filter
+              ? `No ${EVENT_TYPE_LABELS[filter].toLowerCase()} events yet.`
+              : 'No tracked events yet. Open a product, search, add to cart, or background the app.'}
           </ThemedText>
         }
       />
@@ -59,6 +73,7 @@ const styles = StyleSheet.create({
   content: {
     gap: Spacing.three,
     paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',

@@ -1,6 +1,7 @@
 import { apiClient } from '@/services';
 
 import type { Product, ProductCategory, ProductsResponse } from '../types';
+import { isDefaultFirstPage, loadFirstPage, saveFirstPage } from './products-cache';
 
 const PRODUCTS_ENDPOINT = 'https://dummyjson.com/products';
 
@@ -35,10 +36,29 @@ export const productsService = {
         ? `${PRODUCTS_ENDPOINT}/category/${category}`
         : PRODUCTS_ENDPOINT;
 
-    const { data } = await apiClient.get<ProductsResponse>(endpoint, {
-      params: search ? { q: search, limit, skip } : { limit, skip },
-    });
-    return data;
+    try {
+      const { data } = await apiClient.get<ProductsResponse>(endpoint, {
+        params: search ? { q: search, limit, skip } : { limit, skip },
+      });
+
+      if (isDefaultFirstPage(search, category, skip)) {
+        await saveFirstPage(data);
+      }
+
+      return data;
+    } catch (error) {
+      if (!isDefaultFirstPage(search, category, skip)) throw error;
+
+      const cached = await loadFirstPage();
+      if (!cached) throw error;
+
+      return {
+        ...cached,
+        total: cached.products.length,
+        skip: 0,
+        limit: cached.products.length,
+      };
+    }
   },
 
   async getProductById(id: number): Promise<Product> {

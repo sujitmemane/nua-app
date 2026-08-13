@@ -35,6 +35,7 @@ export function useProducts(search = '', category = ALL_CATEGORY) {
       return nextSkip < lastPage.total ? nextSkip : undefined;
     },
     select: (data) => data.pages.flatMap((page) => page.products),
+    networkMode: 'offlineFirst',
   });
 }
 

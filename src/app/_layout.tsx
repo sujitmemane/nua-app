@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { Toast, toastConfig } from '@/components/toast-config';
 import { useTrackAppBackground } from '@/features/events/hooks/use-track-app-background';
 import { queryClient } from '@/lib/query-client';
 import { useLoadFonts } from '@/theme/use-load-fonts';
@@ -35,6 +36,7 @@ export default function RootLayout() {
           <Stack.Screen name="product/[id]" options={{ title: 'Product' }} />
           <Stack.Screen name="return-policy" options={{ title: 'Return Policy' }} />
         </Stack>
+        <Toast config={toastConfig} topOffset={60} />
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConnectionBanner } from '@/components/connection-banner';
 import { SearchBar } from '@/components/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -9,8 +10,11 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { eventsService } from '@/features/events';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
+import { useNetInfo } from '@/hooks/use-net-info';
+import { toast } from '@/utils/toast';
 import { CategoryTabs } from '../components/category-tabs';
 import { ProductCard } from '../components/product-card';
+import { ProductsHeader } from '../components/products-header';
 import {
   getCategoryHeaderTheme,
   getCategorySearchPlaceholder,
@@ -24,6 +28,7 @@ export function ProductsScreen() {
   const [category, setCategory] = useState(ALL_CATEGORY);
   const debouncedSearch = useDebouncedValue(search.trim(), 400);
   const headerTheme = getCategoryHeaderTheme(category);
+  const { isOnline } = useNetInfo();
 
   const { data: categories = [] } = useCategories();
   const {
@@ -56,9 +61,7 @@ export function ProductsScreen() {
           { backgroundColor: headerTheme.background, paddingTop: insets.top + Spacing.two },
         ]}>
         <View style={styles.headerInner}>
-          <ThemedText type="h1" style={{ color: headerTheme.foreground }}>
-            Nua
-          </ThemedText>
+          <ProductsHeader theme={headerTheme} />
           <SearchBar
             value={search}
             onChangeText={setSearch}
@@ -69,6 +72,7 @@ export function ProductsScreen() {
             borderColor="transparent"
           />
         </View>
+        <ConnectionBanner />
         <CategoryTabs
           categories={categories}
           selected={category}
@@ -87,12 +91,22 @@ export function ProductsScreen() {
         renderItem={({ item }) => <ProductCard product={item} />}
         contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + Spacing.four }]}
         onEndReached={() => {
+          if (!isOnline) {
+            toast.error("You're offline", "Can't load more. Please connect to the internet.");
+            return;
+          }
           if (hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
           }
         }}
         onEndReachedThreshold={0.5}
-        onRefresh={refetch}
+        onRefresh={() => {
+          if (!isOnline) {
+            toast.error("You're offline", "Can't refresh. Please connect to the internet.");
+            return;
+          }
+          refetch();
+        }}
         refreshing={isRefetching}
         keyboardShouldPersistTaps="handled"
         ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={styles.state} /> : null}
