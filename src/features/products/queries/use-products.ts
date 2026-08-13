@@ -14,7 +14,7 @@ export const productKeys = {
 export function useCategories() {
   return useQuery({
     queryKey: productKeys.categories,
-    queryFn: productsService.getCategories,
+    queryFn: ({ signal }) => productsService.getCategories(signal),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -23,12 +23,13 @@ export function useProducts(search = '', category = ALL_CATEGORY) {
   return useInfiniteQuery({
     queryKey: productKeys.list(search, category),
     initialPageParam: 0,
-    queryFn: ({ pageParam }) =>
+    queryFn: ({ pageParam, signal }) =>
       productsService.getProducts({
         limit: PAGE_SIZE,
         skip: pageParam,
         search,
         category: search ? ALL_CATEGORY : category,
+        signal,
       }),
     getNextPageParam: (lastPage) => {
       const nextSkip = lastPage.skip + lastPage.limit;
@@ -42,7 +43,7 @@ export function useProducts(search = '', category = ALL_CATEGORY) {
 export function useProduct(id: number) {
   return useQuery({
     queryKey: productKeys.detail(id),
-    queryFn: () => productsService.getProductById(id),
+    queryFn: ({ signal }) => productsService.getProductById(id, signal),
     enabled: Number.isFinite(id) && id > 0,
   });
 }

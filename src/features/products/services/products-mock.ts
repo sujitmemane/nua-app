@@ -13,16 +13,21 @@ export const PRODUCTS_API_MOCK: ProductsMockMode = 'off';
 /** Matches `apiClient` timeout. Lower this if you don't want to wait 15s while testing. */
 const MOCK_TIMEOUT_MS = 5_000;
 
-export async function applyProductsMock(mode: ProductsMockMode): Promise<void> {
+export async function applyProductsMock(mode: ProductsMockMode, signal?: AbortSignal): Promise<void> {
   if (mode === 'off') return;
 
   if (mode === 'timeout') {
     await new Promise<never>((_, reject) => {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         reject(
           new AxiosError(`timeout of ${MOCK_TIMEOUT_MS}ms exceeded`, AxiosError.ECONNABORTED)
         );
       }, MOCK_TIMEOUT_MS);
+
+      signal?.addEventListener('abort', () => {
+        clearTimeout(timer);
+        reject(new AxiosError('canceled', AxiosError.ERR_CANCELED));
+      });
     });
   }
 

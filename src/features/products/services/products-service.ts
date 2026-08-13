@@ -13,6 +13,7 @@ export interface GetProductsParams {
   skip?: number;
   search?: string;
   category?: string;
+  signal?: AbortSignal;
 }
 
 /**
@@ -20,8 +21,10 @@ export interface GetProductsParams {
  * Absolute URLs are used so this works regardless of the shared axios baseURL.
  */
 export const productsService = {
-  async getCategories(): Promise<ProductCategory[]> {
-    const { data } = await apiClient.get<ProductCategory[]>(`${PRODUCTS_ENDPOINT}/categories`);
+  async getCategories(signal?: AbortSignal): Promise<ProductCategory[]> {
+    const { data } = await apiClient.get<ProductCategory[]>(`${PRODUCTS_ENDPOINT}/categories`, {
+      signal,
+    });
     return data;
   },
 
@@ -30,6 +33,7 @@ export const productsService = {
     skip = 0,
     search = '',
     category = ALL_CATEGORY,
+    signal,
   }: GetProductsParams = {}): Promise<ProductsResponse> {
     const endpoint = search
       ? `${PRODUCTS_ENDPOINT}/search`
@@ -38,10 +42,11 @@ export const productsService = {
         : PRODUCTS_ENDPOINT;
 
     try {
-      await applyProductsMock(PRODUCTS_API_MOCK);
+      await applyProductsMock(PRODUCTS_API_MOCK, signal);
 
       const { data } = await apiClient.get<ProductsResponse>(endpoint, {
         params: search ? { q: search, limit, skip } : { limit, skip },
+        signal,
       });
 
       if (isDefaultFirstPage(search, category, skip)) {
@@ -50,6 +55,7 @@ export const productsService = {
 
       return data;
     } catch (error) {
+      if (signal?.aborted) throw error;
       if (PRODUCTS_API_MOCK !== 'off') throw error;
       if (!isDefaultFirstPage(search, category, skip)) throw error;
 
@@ -65,8 +71,8 @@ export const productsService = {
     }
   },
 
-  async getProductById(id: number): Promise<Product> {
-    const { data } = await apiClient.get<Product>(`${PRODUCTS_ENDPOINT}/${id}`);
+  async getProductById(id: number, signal?: AbortSignal): Promise<Product> {
+    const { data } = await apiClient.get<Product>(`${PRODUCTS_ENDPOINT}/${id}`, { signal });
     return data;
   },
 };
