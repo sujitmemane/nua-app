@@ -1,4 +1,5 @@
-import { StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -14,27 +15,55 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
-      <ThemedView type="backgroundElement" style={styles.header}>
-        <ThemedText type="default">{product.name}</ThemedText>
-        <ThemedText type="default">{formatCurrency(product.price, product.currency)}</ThemedText>
-      </ThemedView>
-      <ThemedText type="small" themeColor="textSecondary">
-        {product.description}
-      </ThemedText>
+      <Image
+        source={{ uri: product.thumbnail }}
+        style={styles.thumbnail}
+        contentFit="contain"
+        transition={200}
+        cachePolicy="memory-disk"
+        accessibilityLabel={product.title}
+      />
+      <View style={styles.body}>
+        <View style={styles.header}>
+          <ThemedText type="default" style={styles.title} numberOfLines={1}>
+            {product.title}
+          </ThemedText>
+          <ThemedText type="default">{formatCurrency(product.price)}</ThemedText>
+        </View>
+        <ThemedText type="smallBold" themeColor="textSecondary">
+          {product.brand} · ★ {product.rating.toFixed(1)}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+          {product.description}
+        </ThemedText>
+      </View>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    gap: Spacing.two,
+    flexDirection: 'row',
+    gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Spacing.three,
+  },
+  thumbnail: {
+    width: 64,
+    height: 64,
+    borderRadius: Spacing.two,
+  },
+  body: {
+    flex: 1,
+    gap: Spacing.one,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  title: {
+    flex: 1,
   },
 });
