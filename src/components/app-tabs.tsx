@@ -1,37 +1,68 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { fontFamily } from '@/constants/theme';
 import { selectCartCount, useCartStore } from '@/features/cart';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const theme = useTheme();
   const cartCount = useCartStore(selectCartCount);
+  
+
+  const labelFont = {
+    fontFamily: fontFamily.semibold,
+    fontSize: 11,
+  } as const;
 
   return (
     <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.surface}
-      labelStyle={{ selected: { color: colors.primary } }}>
+      backgroundColor={theme.background}
+      tintColor={theme.primary}
+      iconColor={{ default: theme.textMuted, selected: theme.primary }}
+      labelStyle={{
+        default: { ...labelFont, color: theme.textMuted },
+        selected: { ...labelFont, color: theme.primary },
+      }}
+      badgeBackgroundColor={theme.primary}
+      badgeTextColor="#FFFFFF"
+      indicatorColor={theme.primaryLight}
+      rippleColor={theme.primaryLight}
+      shadowColor={theme.border}
+      blurEffect="none"
+      disableTransparentOnScrollEdge
+      labelVisibilityMode="labeled">
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Products</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'bag', selected: 'bag.fill' }} md="shopping_bag" />
+        <NativeTabs.Trigger.Label selectedStyle={{ ...labelFont, color: theme.primary }}>
+          Products
+        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'bag', selected: 'bag.fill' }}
+          md="shopping_bag"
+        />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="events">
-        <NativeTabs.Trigger.Label>Events</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label selectedStyle={{ ...labelFont, color: theme.primary }}>
+          Events
+        </NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          sf={{ default: 'calendar', selected: 'calendar' }}
-          md="calendar_month"
+          sf={{ default: 'list.bullet.rectangle', selected: 'list.bullet.rectangle.fill' }}
+          md="receipt_long"
         />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="cart">
-        <NativeTabs.Trigger.Label>Cart</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'cart', selected: 'cart.fill' }} md="shopping_cart" />
+        <NativeTabs.Trigger.Label selectedStyle={{ ...labelFont, color: theme.primary }}>
+          Cart
+        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'cart', selected: 'cart.fill' }}
+          md="shopping_cart"
+        />
         {cartCount > 0 ? (
-          <NativeTabs.Trigger.Badge>{cartCount > 99 ? '99+' : String(cartCount)}</NativeTabs.Trigger.Badge>
+          <NativeTabs.Trigger.Badge>
+            {cartCount > 99 ? '99+' : String(cartCount)}
+          </NativeTabs.Trigger.Badge>
         ) : null}
       </NativeTabs.Trigger>
     </NativeTabs>
