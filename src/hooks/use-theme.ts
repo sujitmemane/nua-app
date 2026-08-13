@@ -12,3 +12,5 @@ export function useTheme() {
 
   return Colors[theme];
 }
+
+export type AppTheme = ReturnType<typeof useTheme>;

@@ -1,14 +1,16 @@
 import { apiClient } from '@/services';
 
-import type { Product, ProductsResponse } from '../types';
+import type { Product, ProductCategory, ProductsResponse } from '../types';
 
 const PRODUCTS_ENDPOINT = 'https://dummyjson.com/products';
+
+export const ALL_CATEGORY = 'all';
 
 export interface GetProductsParams {
   limit?: number;
   skip?: number;
-
   search?: string;
+  category?: string;
 }
 
 /**
@@ -16,8 +18,23 @@ export interface GetProductsParams {
  * Absolute URLs are used so this works regardless of the shared axios baseURL.
  */
 export const productsService = {
-  async getProducts({ limit = 10, skip = 0, search = '' }: GetProductsParams = {}): Promise<ProductsResponse> {
-    const endpoint = search ? `${PRODUCTS_ENDPOINT}/search` : PRODUCTS_ENDPOINT;
+  async getCategories(): Promise<ProductCategory[]> {
+    const { data } = await apiClient.get<ProductCategory[]>(`${PRODUCTS_ENDPOINT}/categories`);
+    return data;
+  },
+
+  async getProducts({
+    limit = 12,
+    skip = 0,
+    search = '',
+    category = ALL_CATEGORY,
+  }: GetProductsParams = {}): Promise<ProductsResponse> {
+    const endpoint = search
+      ? `${PRODUCTS_ENDPOINT}/search`
+      : category && category !== ALL_CATEGORY
+        ? `${PRODUCTS_ENDPOINT}/category/${category}`
+        : PRODUCTS_ENDPOINT;
+
     const { data } = await apiClient.get<ProductsResponse>(endpoint, {
       params: search ? { q: search, limit, skip } : { limit, skip },
     });

@@ -9,17 +9,23 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { eventsService } from '@/features/events';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
-import { useCartStore } from '@/features/cart';
+import { CategoryTabs } from '../components/category-tabs';
 import { ProductCard } from '../components/product-card';
-import { useProducts } from '../queries/use-products';
+import {
+  getCategoryHeaderTheme,
+  getCategorySearchPlaceholder,
+} from '../constants/category-themes';
+import { useCategories, useProducts } from '../queries/use-products';
+import { ALL_CATEGORY } from '../services/products-service';
 
 export function ProductsScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState(ALL_CATEGORY);
   const debouncedSearch = useDebouncedValue(search.trim(), 400);
+  const headerTheme = getCategoryHeaderTheme(category);
 
-  const cartItems = useCartStore((state) => state.items);
-
+  const { data: categories = [] } = useCategories();
   const {
     data: products,
     isPending,
@@ -30,29 +36,52 @@ export function ProductsScreen() {
     isFetchingNextPage,
     refetch,
     isRefetching,
-  } = useProducts(debouncedSearch);
-
-
-
-  console.log(cartItems,"CART_ITEMS");
+  } = useProducts(debouncedSearch, category);
 
   useEffect(() => {
     if (!debouncedSearch) return;
-    eventsService.searchPerformed({ query: debouncedSearch });
-  }, [debouncedSearch]);
+    eventsService.searchPerformed({ query: debouncedSearch, category });
+  }, [debouncedSearch, category]);
+
+  function handleSelectCategory(next: string) {
+    setCategory(next);
+    if (search) setSearch('');
+  }
 
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + Spacing.four }]}>
-        <ThemedText type="subtitle" style={styles.title}>
-          Products
-        </ThemedText>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Search products" />
+      <View
+        style={[
+          styles.headerBlock,
+          { backgroundColor: headerTheme.background, paddingTop: insets.top + Spacing.two },
+        ]}>
+        <View style={styles.headerInner}>
+          <ThemedText type="h1" style={{ color: headerTheme.foreground }}>
+            Nua
+          </ThemedText>
+          <SearchBar
+            value={search}
+            onChangeText={setSearch}
+            placeholder={getCategorySearchPlaceholder(category)}
+            backgroundColor={headerTheme.searchBackground}
+            textColor={headerTheme.searchText}
+            placeholderColor={headerTheme.searchPlaceholder}
+            borderColor="transparent"
+          />
+        </View>
+        <CategoryTabs
+          categories={categories}
+          selected={category}
+          onSelect={handleSelectCategory}
+          activeColor={headerTheme.foreground}
+          inactiveColor={headerTheme.muted}
+          underlineColor={headerTheme.underline}
+        />
       </View>
 
       <FlatList
         data={products}
-        numColumns={2}
+        numColumns={3}
         columnWrapperStyle={styles.row}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ProductCard product={item} />}
@@ -76,7 +105,9 @@ export function ProductsScreen() {
             </ThemedText>
           ) : (
             <ThemedText themeColor="textSecondary" style={styles.state}>
-              {debouncedSearch ? `No products found for “${debouncedSearch}”.` : 'No products yet.'}
+              {debouncedSearch
+                ? `No products found for “${debouncedSearch}”.`
+                : 'No products yet.'}
             </ThemedText>
           )
         }
@@ -89,26 +120,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  headerBlock: {
+    width: '100%',
+    paddingBottom: Spacing.one,
+  },
+  headerInner: {
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.three,
-  },
-  title: {
-    marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    gap: Spacing.two,
+    paddingBottom: Spacing.two,
   },
   content: {
-    gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.two,
     paddingTop: Spacing.three,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
   row: {
-    gap: Spacing.three,
+    gap: Spacing.two,
   },
   state: {
     textAlign: 'center',
