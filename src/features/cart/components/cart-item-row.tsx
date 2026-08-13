@@ -1,16 +1,19 @@
 import { Image } from 'expo-image';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useNetInfo } from '@/hooks/use-net-info';
 import { useTheme } from '@/hooks/use-theme';
 import { formatCurrency, getDiscountedPrice } from '@/utils';
+import { toast } from '@/utils/toast';
 
 import type { CartItem } from '../types';
 
 const IMAGE_SIZE = 72;
-const STEPPER_HEIGHT = 34;
+const STEPPER_WIDTH = 92;
+const STEPPER_HEIGHT = 32;
 
 interface CartItemRowProps {
   item: CartItem;
@@ -20,62 +23,79 @@ interface CartItemRowProps {
 
 export function CartItemRow({ item, onIncrement, onDecrement }: CartItemRowProps) {
   const theme = useTheme();
+  const router = useRouter();
+  const { isOnline } = useNetInfo();
   const unitPrice = getDiscountedPrice(item.price, item.discountPercentage);
   const hasDiscount = item.discountPercentage > 0;
 
+  function openProduct() {
+    if (!isOnline) {
+      toast.error("You're offline", "Can't open product details. Please connect to the internet.");
+      return;
+    }
+    router.push(`/product/${item.productId}`);
+  }
+
   return (
     <View style={[styles.row, { borderBottomColor: theme.border }]}>
-      <Link href={`/product/${item.productId}`} asChild>
-        <Pressable style={({ pressed }) => [styles.product, pressed && styles.pressed]}>
-          <View style={[styles.imageWrap, { backgroundColor: theme.surface }]}>
-            <Image
-              source={{ uri: item.thumbnail }}
-              style={styles.thumbnail}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-              accessibilityLabel={item.title}
-            />
-          </View>
+      <Pressable
+        onPress={openProduct}
+        style={({ pressed }) => [
+          styles.imageWrap,
+          { backgroundColor: theme.surface },
+          pressed && styles.pressed,
+        ]}>
+        <Image
+          source={{ uri: item.thumbnail }}
+          style={styles.thumbnail}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          accessibilityLabel={item.title}
+        />
+      </Pressable>
 
-          <View style={styles.info}>
-            <ThemedText type="small" numberOfLines={2} style={styles.title}>
-              {item.title}
-            </ThemedText>
-            <View style={styles.priceRow}>
-              <ThemedText type="bodyMedium">{formatCurrency(unitPrice)}</ThemedText>
-              {hasDiscount ? (
-                <ThemedText type="caption" themeColor="textMuted" style={styles.original}>
-                  {formatCurrency(item.price)}
-                </ThemedText>
-              ) : null}
-            </View>
-          </View>
+      <View style={styles.details}>
+        <Pressable onPress={openProduct} style={({ pressed }) => pressed && styles.pressed}>
+          <ThemedText type="small" numberOfLines={2} style={styles.title}>
+            {item.title}
+          </ThemedText>
         </Pressable>
-      </Link>
 
-      <View style={styles.stepperWrap}>
-        <View style={[styles.stepper, { backgroundColor: theme.primary }]}>
-          <Pressable
-            onPress={onDecrement}
-            hitSlop={8}
-            style={({ pressed }) => [styles.stepHit, pressed && styles.pressed]}>
-            <ThemedText type="button" style={styles.stepText}>
-              −
+        <View style={styles.footer}>
+          <View style={styles.priceRow}>
+            <ThemedText type="bodyMedium" numberOfLines={1}>
+              {formatCurrency(unitPrice)}
             </ThemedText>
-          </Pressable>
-          <View style={styles.qty}>
-            <ThemedText type="button" style={styles.stepText}>
-              {item.quantity}
-            </ThemedText>
+            {hasDiscount ? (
+              <ThemedText type="caption" themeColor="textMuted" numberOfLines={1} style={styles.original}>
+                {formatCurrency(item.price)}
+              </ThemedText>
+            ) : null}
           </View>
-          <Pressable
-            onPress={onIncrement}
-            hitSlop={8}
-            style={({ pressed }) => [styles.stepHit, pressed && styles.pressed]}>
-            <ThemedText type="button" style={styles.stepText}>
-              +
-            </ThemedText>
-          </Pressable>
+
+          <View style={[styles.stepper, { backgroundColor: theme.primary }]}>
+            <Pressable
+              onPress={onDecrement}
+              hitSlop={6}
+              style={({ pressed }) => [styles.stepHit, pressed && styles.pressed]}>
+              <ThemedText type="button" style={styles.stepText}>
+                −
+              </ThemedText>
+            </Pressable>
+            <View style={styles.qty}>
+              <ThemedText type="button" style={styles.stepText}>
+                {item.quantity}
+              </ThemedText>
+            </View>
+            <Pressable
+              onPress={onIncrement}
+              hitSlop={6}
+              style={({ pressed }) => [styles.stepHit, pressed && styles.pressed]}>
+              <ThemedText type="button" style={styles.stepText}>
+                +
+              </ThemedText>
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>
@@ -85,70 +105,70 @@ export function CartItemRow({ item, onIncrement, onDecrement }: CartItemRowProps
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
+    gap: Spacing.three,
     paddingVertical: Spacing.three,
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  product: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 0,
-    marginRight: Spacing.three,
   },
   imageWrap: {
     width: IMAGE_SIZE,
     height: IMAGE_SIZE,
     borderRadius: 12,
     padding: 8,
-    marginRight: Spacing.three,
   },
   thumbnail: {
     width: '100%',
     height: '100%',
   },
-  info: {
+  details: {
     flex: 1,
     minWidth: 0,
-    justifyContent: 'center',
-    gap: 4,
+    minHeight: IMAGE_SIZE,
+    justifyContent: 'space-between',
+    gap: Spacing.two,
   },
   title: {
     fontWeight: '600',
   },
-  priceRow: {
+  footer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  priceRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: 6,
   },
   original: {
     textDecorationLine: 'line-through',
   },
-  stepperWrap: {
-    height: IMAGE_SIZE,
-    justifyContent: 'center',
-  },
   stepper: {
-    width: 96,
+    width: STEPPER_WIDTH,
     height: STEPPER_HEIGHT,
     borderRadius: 8,
     flexDirection: 'row',
-    overflow: 'hidden',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   stepHit: {
-    flex: 1,
+    width: 32,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   qty: {
-    width: 28,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepText: {
     color: '#FFFFFF',
     fontSize: 15,
-    lineHeight: 15,
+    lineHeight: 18,
     includeFontPadding: false,
   },
   pressed: {
