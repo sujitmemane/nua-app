@@ -6,6 +6,11 @@ export function formatCurrency(amount: number, currency = 'USD'): string {
   }).format(amount);
 }
 
+/** Applies dummyjson `discountPercentage` to the list price. */
+export function getDiscountedPrice(price: number, discountPercentage: number): number {
+  return price * (1 - discountPercentage / 100);
+}
+
 export function formatEventDate(iso: string): string {
   const date = new Date(iso);
   return new Intl.DateTimeFormat('en-US', {

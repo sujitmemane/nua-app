@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { StyleSheet, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -14,34 +15,41 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      <Image
-        source={{ uri: product.thumbnail }}
-        style={styles.thumbnail}
-        contentFit="contain"
-        transition={200}
-        cachePolicy="memory-disk"
-        accessibilityLabel={product.title}
-      />
-      <View style={styles.body}>
-        <View style={styles.header}>
-          <ThemedText type="default" style={styles.title} numberOfLines={1}>
-            {product.title}
-          </ThemedText>
-          <ThemedText type="default">{formatCurrency(product.price)}</ThemedText>
-        </View>
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          {product.brand} · ★ {product.rating.toFixed(1)}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-          {product.description}
-        </ThemedText>
-      </View>
-    </ThemedView>
+    <Link href={`/product/${product.id}`} asChild>
+      <Pressable style={({ pressed }) => pressed && styles.pressed}>
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <Image
+            source={{ uri: product.thumbnail }}
+            style={styles.thumbnail}
+            contentFit="contain"
+            transition={200}
+            cachePolicy="memory-disk"
+            accessibilityLabel={product.title}
+          />
+          <View style={styles.body}>
+            <View style={styles.header}>
+              <ThemedText type="default" style={styles.title} numberOfLines={1}>
+                {product.title}
+              </ThemedText>
+              <ThemedText type="default">{formatCurrency(product.price)}</ThemedText>
+            </View>
+            <ThemedText type="smallBold" themeColor="textSecondary">
+              {product.brand} · ★ {product.rating.toFixed(1)}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+              {product.description}
+            </ThemedText>
+          </View>
+        </ThemedView>
+      </Pressable>
+    </Link>
   );
 }
 
 const styles = StyleSheet.create({
+  pressed: {
+    opacity: 0.7,
+  },
   card: {
     flexDirection: 'row',
     gap: Spacing.three,

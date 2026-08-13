@@ -34,6 +34,6 @@ export function useProduct(id: number) {
   return useQuery({
     queryKey: productKeys.detail(id),
     queryFn: () => productsService.getProductById(id),
-    enabled: Boolean(id),
+    enabled: Number.isFinite(id) && id > 0,
   });
 }
