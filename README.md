@@ -1,23 +1,29 @@
 # Nua
 
-A Blinkit-style commerce client built with **Expo SDK 57** and TypeScript.
+## App Overview
 
-Product listing with infinite scroll and debounced search, product detail with image carousel and discounted pricing, a persisted cart, offline-aware browsing, an in-app analytics event log, and a Return Policy WebView.
+Nua is a React Native product-listing app built with Expo SDK 57. Users browse a paginated catalog from DummyJSON, search and filter by category, open a product detail screen, manage a local cart, and open the return policy in an in-app WebView.
+
+The app also tracks a small set of client-side analytics events, persists cart and theme preference, and degrades when the network drops.
+
+## App Demo
+
+[Watch the walkthrough on Loom](https://www.loom.com/share/d35e3d5de622400a98fef574fb8f560b)
+
+### Screenshots
 
 <table>
 <tr>
 <td width="50%">
 
-**Listing (dark)**  
-Grid, category chips, ADD / qty stepper.
+**Listing (dark)**
 
 ![Product listing](docs/screenshots/01-listing.png)
 
 </td>
 <td width="50%">
 
-**Listing (light)**  
-Same screen after the theme toggle.
+**Listing (light)**
 
 ![Light mode](docs/screenshots/11-light-mode.png)
 
@@ -26,16 +32,14 @@ Same screen after the theme toggle.
 <tr>
 <td>
 
-**Loading**  
-Grid skeletons while products fetch.
+**Loading**
 
 ![Loading skeleton](docs/screenshots/02-loading.png)
 
 </td>
 <td>
 
-**Search**  
-Debounced DummyJSON search (`oil`).
+**Search**
 
 ![Search results](docs/screenshots/03-search.png)
 
@@ -44,16 +48,14 @@ Debounced DummyJSON search (`oil`).
 <tr>
 <td>
 
-**Empty search**  
-No matches for a nonsense query.
+**Empty search**
 
 ![Empty search](docs/screenshots/04-empty-search.png)
 
 </td>
 <td>
 
-**Error + retry**  
-Failed fetch with a Retry action.
+**Error + retry**
 
 ![Error retry](docs/screenshots/05-error.png)
 
@@ -62,16 +64,14 @@ Failed fetch with a Retry action.
 <tr>
 <td>
 
-**Product detail**  
-Discounted price, qty in cart, tags.
+**Product detail**
 
 ![Product detail](docs/screenshots/06-detail.png)
 
 </td>
 <td>
 
-**Return Policy**  
-In-app WebView (not an external browser).
+**Return policy (WebView)**
 
 ![Return Policy WebView](docs/screenshots/07-webview.png)
 
@@ -80,8 +80,7 @@ In-app WebView (not an external browser).
 <tr>
 <td>
 
-**Cart**  
-Persisted items, stepper, discounted subtotal.
+**Cart**
 
 ![Cart](docs/screenshots/08-cart.png)
 
@@ -97,16 +96,14 @@ Persisted items, stepper, discounted subtotal.
 <tr>
 <td>
 
-**Events**  
-In-app analytics log + filter pills.
+**Events log**
 
 ![Events log](docs/screenshots/10-events.png)
 
 </td>
 <td>
 
-**Offline**  
-Banner + cached first page.
+**Offline**
 
 ![Offline](docs/screenshots/12-offline.png)
 
@@ -114,169 +111,182 @@ Banner + cached first page.
 </tr>
 </table>
 
----
+## Features
 
-## Quick start
-
-```bash
-npm install
-cp .env.example .env   # optional — DummyJSON is the default
-npx expo start
-```
-
-| Command | What it does |
+| Feature | Implementation |
 | --- | --- |
-| `npx expo start` | Dev server (iOS / Android / Expo Go / web) |
-| `npm test` | Search race-condition unit test |
-| `npm run lint` | ESLint via `expo lint` |
+| Product listing | 3-column `FlatList`, DummyJSON `limit` / `skip`, page size 12 |
+| Infinite scroll | `onEndReached` → `fetchNextPage()` |
+| Pull to refresh | `refetch()`, independent of page-2 loading |
+| Search | Debounced 400ms → `GET /products/search?q=` |
+| Categories | DummyJSON `/products/categories` + chip filter |
+| Product detail | Images, discounted price, stock, reviews, add to cart |
+| Image carousel | Horizontal paging `ScrollView` when a product has multiple images |
+| Cart | Add / increment / decrement / remove / clear |
+| Quantity | Stepper on product card, detail, and cart row |
+| Cart persist | Zustand + AsyncStorage (`nua-cart`) |
+| Theme persist | Light / dark toggle, AsyncStorage (`nua-theme`) |
+| Offline detection | NetInfo `isConnected`; banner + toasts |
+| Cached listing | First default page written to AsyncStorage; served if that fetch fails |
+| API retry | TanStack Query, up to 5 attempts, exponential delay |
+| Loading | Product grid skeletons; WebView skeleton overlay |
+| Error | List: “Couldn’t load products” + Retry. Detail: error message |
+| Empty | No search matches; empty cart; empty events log |
+| WebView | Return policy URL loaded in `react-native-webview` |
+| Analytics | In-app Events tab: `product_viewed`, `add_to_cart`, `search_performed`, `app_backgrounded` |
 
-**Requirements:** Node 20+, Expo Go or a simulator.
+Not implemented: checkout / order placement (button is UI-only), WebView ↔ JS messaging, analytics persist.
 
-```bash
-EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
-```
+## Technical Implementation
 
----
+**Stack.** Expo SDK 57, React Native 0.86, TypeScript, Expo Router (`NativeTabs` + stack for detail / return policy).
 
-## How state is split
+**API.** Shared axios client (`timeout: 15000`). Product URLs are built from `EXPO_PUBLIC_PRODUCTS_URL` (default `https://dummyjson.com/products`).
 
-Two kinds of data, two owners.
+**Server state.** TanStack Query `useInfiniteQuery` / `useQuery`. Query keys include `search` and `category`. `staleTime` is 60s for lists, 5 minutes for categories. `networkMode: 'offlineFirst'` so `queryFn` still runs when Query thinks the device is offline (needed for the disk fallback).
 
-**TanStack Query** owns anything that comes from DummyJSON: product pages, categories, product detail. It already knows how to cache by key, paginate, retry, abort, and mark data stale. Reimplementing that in a store would be a worse cache.
+**Client state.** Zustand for cart, theme, and the events log. Cart and theme use `persist` + AsyncStorage. Events stay in memory.
 
-**Zustand** owns anything the device is the source of truth for: cart lines, light/dark preference, the in-app event log. Those are sync mutations. A query cache is the wrong shape.
+**Connectivity.** `@react-native-community/netinfo` drives both the UI (`useNetInfo`) and Query’s `onlineManager`. Online is `isConnected !== false` — `isInternetReachable` is ignored because it false-reports offline on iOS Simulator.
 
-That split is the main trade-off. Context would work for theme, but cart updates from product cards would re-render more of the tree unless you split contexts carefully. Redux is fine; it's just more ceremony than this surface needs. Zustand's selectors keep a product card subscribed only to `quantity` for *that* id, and `persist` maps cart + theme onto AsyncStorage without extra glue.
+**Retries.** See [Offline & Network Resilience](#offline--network-resilience).
 
-Analytics is fired from the cart store itself (`addItem` / `increment`), not from each button. The event stays next to the mutation.
+**Cancellation.** `queryFn` receives Query’s `AbortSignal` and forwards it to axios. Changing search or category changes the query key, which aborts the in-flight request.
 
-Routes in `src/app/` are shells. Screens, queries, and services live under `src/features/`.
+**Lists.** Products, cart, and events use `FlatList`. Product `keyExtractor` is `String(item.id)`. Images use `expo-image` with `cachePolicy="memory-disk"`.
 
-```
-src/
-├── app/                 # Expo Router — thin
-├── features/products|cart|events
-├── lib/                 # QueryClient, offline flags
-├── services/            # shared axios instance
-└── theme/               # tokens + persisted preference
-```
+**WebView.** Loads a static Nua return-policy URL. Skeleton until `onLoadEnd` / `onError`. No `onMessage` / `injectedJavaScript` bridge.
 
----
+## Offline & Network Resilience
 
-## Caching
+When NetInfo reports disconnected:
 
-Three layers, on purpose. They fail independently.
+- A banner is shown in the status-bar strip (“It seems you are offline…”).
+- Coming back online shows a short “we are back” state, then hides.
+- Load more, pull to refresh, and Retry toast and return if still offline.
+- Tapping a product card does not navigate to detail (detail is a live `GET /products/:id` with no disk cache). Cart +/− still works.
 
-### 1. In-memory (TanStack Query)
+**Cached products.** A successful default first page (`no search`, category `all`, `skip === 0`) is saved under `nua-products-first-page`. If that same request later fails (and is not aborted / not an API mock), the service returns the snapshot. Search, category, and later pages are not written to disk.
 
-List queries use `staleTime: 60s`. Categories use `5 min` — they almost never change during a session. After staleTime, the UI still shows the last pages while a background refetch runs. `queryKey` is `['products', 'list', { search, category }]`, so “oil” and “All” don’t share a cache with “oil” + Beauty.
+**Temporary API failures.** Query retries failed queries unless:
 
-`networkMode: 'offlineFirst'` is required for the disk fallback below. Default Query behavior is “don’t run `queryFn` if we think we’re offline.” We *want* the function to run so it can read AsyncStorage.
+- already retried 5 times, or
+- the error is axios with HTTP 400–499 (client errors are not retried).
 
-### 2. Disk (first page only)
+Delay: `min(1000 * 2^attemptIndex, 8000)` → 1s, 2s, 4s, then 8s cap.
 
-On a successful default first page (`search === ''`, category `all`, `skip === 0`), the response is written to AsyncStorage (`nua-products-first-page`).
+After retries are exhausted, the products list shows `ProductsErrorState` (offline copy vs generic “Something went wrong”) and a Retry button that calls `refetch()`. Product detail shows `error.message` only — no retry chrome.
 
-On a later fetch failure of that same page, the service returns the disk snapshot instead of throwing — unless the request was aborted, or we’re in an API-mock mode (those mocks must still look like failures).
+## API & Error Handling
 
-**Why only page 1?** Page 2+ is “load more.” Showing a stale first grid is grocery-app-correct (Zepto/Blinkit still show *something*). Serving a stale page 3 as if it were fresh pagination would lie about `total` / `hasNextPage`. Search and category results are also skipped — they’re too specific to be a useful fallback.
-
-**Trade-off:** prices on that cached page can be stale. The offline banner says so. We don’t persist the whole infinite query to disk; that would need a versioned schema and eviction we don’t have.
-
-### 3. Client persist (not product cache)
-
-| Key | What | Why disk |
+| Method | Path | Used for |
 | --- | --- | --- |
-| `nua-cart` | Cart items | Kill-app shouldn’t empty the bag |
-| `nua-theme` | `'light' \| 'dark'` | Preference, then `Appearance.setColorScheme` so native chrome matches |
+| GET | `/products?limit=&skip=` | Paginated listing |
+| GET | `/products/search?q=&limit=&skip=` | Search |
+| GET | `/products/category/:slug?limit=&skip=` | Category listing |
+| GET | `/products/categories` | Category chips |
+| GET | `/products/:id` | Detail |
 
-Events stay in memory. They’re a debug stream, not a ledger.
+DummyJSON has no combined search + category URL. When both are set, the app searches with `limit=0` and filters `product.category === category` in JS (single page).
 
----
+**Lifecycle (listing).** `isPending` → skeleton grid. Success → `FlatList` of products. Failure after retries → error + Retry. Empty result → “No products found for …” / “No products yet.” Footer spinner only while `isFetchingNextPage`.
 
-## Retries (exponential backoff)
+**Cancellation.** Abort on query-key change (search/category). Aborted errors are rethrown and do not fall through to the disk cache.
 
-Transient failures (timeouts, 5xx, network blips) retry up to **5** times. Delay is `min(1000 * 2^attempt, 8000)` — 1s, 2s, 4s, 8s, 8s.
+**Graceful failure.** List: cache fallback for the default first page, otherwise error UI. Offline user actions: toast instead of a hung fetch. WebView: `onError` clears the skeleton so the screen is not stuck loading.
 
-**4xx is not retried.** A 400 from DummyJSON (or our mock) will fail the same way on attempt 2. Retrying it only delays the error UI. The Retry button is an explicit user action; that’s a new query, not a continuation of the backoff loop.
+## Performance
 
-Axios timeout is 15s. Combined with backoff, a truly dead network can sit for a while — that’s why the list uses skeletons, not a spinner that looks frozen, and why 4xx short-circuits.
+- Product grid is a `FlatList` (`numColumns={3}`), not a mapped `ScrollView`.
+- Infinite query loads 12 items per page; `onEndReachedThreshold={0.5}`.
+- Cart quantity on a card uses `useCartStore(selectItemQuantity(product.id))` so a qty change does not subscribe the card to the full cart array.
+- Events filter list is `useMemo`’d by selected pill.
+- Product thumbnails and carousel images: `expo-image`, `cachePolicy="memory-disk"`.
+- List keys: product id (string).
+- `ProductCard` is not wrapped in `React.memo`.
 
-Pull-to-refresh calls `refetch()`. Infinite scroll calls `fetchNextPage()`. They don’t share a “loading” flag: `refreshing={isRefetching && !isPending}` so a page-2 fetch doesn’t yank the list into a pull spinner.
+## App Stats
 
----
+Counted from this repository (not estimated coverage).
 
-## Search races
-
-Type `o` → `oi` → `oil` fast enough and you get three overlapping HTTP calls. If `oi` is slower than `oil`, a naive `.then(setProducts)` flashes the wrong grid.
-
-Two layers:
-
-1. **Debounce 400ms** — don’t hit the network per keystroke. Cheap, but not sufficient: two *debounced* queries can still overlap if the first is slow.
-2. **AbortSignal** — `useInfiniteQuery` keys on `search`. New key → TanStack Query aborts the previous `queryFn`. That signal is passed into axios, so the socket is cancelled, not just ignored in React state.
-
-`npm test` covers this: a hung `"a"` request is aborted; `"iphone"` wins; the stale payload never lands.
-
-DummyJSON has no `?q=&category=` URL. Combined search + category is “search with `limit=0`, then `filter(product.category === category)`.” Wrong, but the API doesn’t offer the right thing. Pagination in that mode is a single page.
-
----
-
-## Offline
-
-Connectivity is `isConnected !== false`. `isInternetReachable` is a false offline on iOS Simulator even with Wi‑Fi on — we learned that the hard way.
-
-When offline:
-
-- Banner sits in the status-bar strip (header color + dark overlay, not a random error red).
-- Load-more, pull-to-refresh, and product-detail navigation toast and no-op. Detail is a network fetch we don’t disk-cache.
-- Cart +/− still works. That’s local state.
-- First-page cache can still populate the grid via `offlineFirst` + the catch path above.
-
----
-
-## Theme
-
-`useThemeStore` is the switch (`preference`, `toggle`, persist). `useTheme()` is `Colors[preference]` — paint, not control. `Appearance.setColorScheme` runs on toggle *and* on rehydrate so NativeTabs / status bar don’t stay on the OS scheme after a cold start.
-
----
-
-## Analytics
-
-In-app Events tab, not a vendor SDK.
-
-| Event | When |
+| Stat | Value |
 | --- | --- |
-| `product_viewed` | Detail has a product |
-| `add_to_cart` | Store add / increment |
-| `search_performed` | Debounced query changes |
-| `app_backgrounded` | `AppState === 'background'` from root layout |
-
-Each row is `{ id, type, metadata, createdAt }`.
-
----
+| Screens | 5 (Products, Events, Cart, Product detail, Return policy) |
+| Tab routes | 3 |
+| Component files (`src/**/components`) | 23 |
+| DummyJSON endpoints used | 5 |
+| `src/` TypeScript files | 71 (36 `.ts`, 35 `.tsx`) |
+| Runtime dependencies | 31 |
+| Dev dependencies | 4 |
+| Automated tests | 0 |
+| Test coverage | not collected |
 
 ## Testing
 
-```bash
-npm test
+There is no Jest (or other) test runner in `package.json`, and no test files. `src/features/products/queries/__tests__/` exists but is empty.
+
+Search cancellation is implemented in production code (`AbortSignal` into axios); it is not covered by an automated test in the current tree.
+
+## Architecture / Project Structure
+
+```
+src/
+├── app/                 # Expo Router: tabs + product/[id] + return-policy
+├── features/
+│   ├── products/        # list, detail, search, cache, WebView
+│   ├── cart/            # Zustand store + cart UI
+│   └── events/          # analytics store, AppState listener, log UI
+├── components/          # shared UI (banner, search, tabs, themed primitives)
+├── hooks/               # net info, debounce, theme colors
+├── lib/                 # QueryClient, screenshot/QA flags
+├── services/            # axios instance
+├── theme/               # palette, typography, theme store
+└── utils/
 ```
 
-Jest via `jest-expo`. One test on purpose: the search abort path. That’s the bug that looks like “search is flaky” in production.
+`src/app/*` re-exports feature screens. Query functions live in `features/products/queries`. HTTP lives in `products-service.ts`.
 
-Dev flags (keep off unless you’re screenshotting):
+## Trade-offs / Engineering Decisions
 
-| Flag | File |
-| --- | --- |
-| `MOCK_OFFLINE` | `src/lib/offline-mock.ts` |
-| `MOCK_SKELETON` | same |
-| `PRODUCTS_API_MOCK` (`'off' \| '400' \| 'timeout'`) | `products-mock.ts` |
+- **Zustand over Context for cart/theme.** Selectors keep a product card subscribed to one item’s quantity. Persist middleware maps cart and theme to AsyncStorage without a separate storage layer. Analytics `add_to_cart` is fired from the store mutation, not from each button.
+- **TanStack Query for DummyJSON.** Pagination, abort, retries, and stale-while-revalidate are query problems. Putting pages in Zustand would duplicate that.
+- **First-page disk cache only.** Showing a stale home grid when offline is useful. Caching page 2+ or search results would need eviction and would mis-report `hasNextPage`.
+- **Retry backoff, skip 4xx.** Timeouts and 5xx are worth waiting; a 400 will not succeed on attempt 2. Retrying 4xx only delays the error UI.
+- **`isConnected` only.** `isInternetReachable` marked the simulator offline while Wi‑Fi was on.
+- **`offlineFirst`.** Default Query mode skips `queryFn` when offline, which would skip the AsyncStorage fallback.
+- **FlatList + paging.** Catalog size is unbounded; a full in-memory list is not the DummyJSON contract (`limit` / `skip`).
 
----
+## Setup & Run
 
-## What’s next
+```bash
+npm install
+cp .env.example .env   # optional; DummyJSON is already the default
+npx expo start
+```
 
-Checkout is UI-only. Product detail doesn’t have the list’s retry chrome. Events aren’t persisted. A fuller suite would lock debounce, backoff, and cart rehydrate — not just the race.
+Then open iOS Simulator, Android emulator, or Expo Go.
 
----
+```bash
+npm run ios
+npm run android
+npm run web
+npm run lint
+```
 
-Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · TanStack Query · Axios · Zustand · AsyncStorage · NetInfo · react-native-webview · jest-expo
+Optional:
+
+```
+EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
+```
+
+Dev-only flags (keep off for a normal run): `MOCK_OFFLINE` / `MOCK_SKELETON` in `src/lib/offline-mock.ts`, `PRODUCTS_API_MOCK` in `src/features/products/services/products-mock.ts` (`'off' | '400' | 'timeout'`).
+
+## Known Limitations
+
+- Checkout does not place an order.
+- Product detail has no Retry button (list does).
+- Detail, search, and extra pages are not disk-cached; offline users only get the last saved default first page (if any).
+- Combined search + category is client-filtered because DummyJSON has no combined endpoint.
+- Analytics events are not persisted across process death.
+- No automated tests.
+- A few Expo-template components remain under `src/components/` (`hint-row`, `collapsible`, `web-badge`, `external-link`) and are unused by the product flow.
