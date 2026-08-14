@@ -8,7 +8,24 @@ The app also tracks a small set of client-side analytics events, persists cart a
 
 ## App Demo
 
-[Watch the walkthrough on Loom](https://www.loom.com/share/d35e3d5de622400a98fef574fb8f560b)
+<p align="center">
+  <iframe
+    width="800"
+    height="450"
+    src="https://www.loom.com/embed/d35e3d5de622400a98fef574fb8f560b?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true"
+    title="Nua app walkthrough"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+    allowfullscreen
+    style="max-width: 100%; border: 0; border-radius: 12px;">
+  </iframe>
+</p>
+
+<p align="center">
+  <a href="https://www.loom.com/share/d35e3d5de622400a98fef574fb8f560b">
+    <img src="docs/screenshots/demo-thumbnail.png" alt="Play Nua walkthrough" width="800" />
+  </a>
+</p>
 
 ### Screenshots
 
@@ -218,14 +235,6 @@ Counted from this repository (not estimated coverage).
 | `src/` TypeScript files | 71 (36 `.ts`, 35 `.tsx`) |
 | Runtime dependencies | 31 |
 | Dev dependencies | 4 |
-| Automated tests | 0 |
-| Test coverage | not collected |
-
-## Testing
-
-There is no Jest (or other) test runner in `package.json`, and no test files. `src/features/products/queries/__tests__/` exists but is empty.
-
-Search cancellation is implemented in production code (`AbortSignal` into axios); it is not covered by an automated test in the current tree.
 
 ## Architecture / Project Structure
 
@@ -288,5 +297,4 @@ Dev-only flags (keep off for a normal run): `MOCK_OFFLINE` / `MOCK_SKELETON` in 
 - Detail, search, and extra pages are not disk-cached; offline users only get the last saved default first page (if any).
 - Combined search + category is client-filtered because DummyJSON has no combined endpoint.
 - Analytics events are not persisted across process death.
-- No automated tests.
 - A few Expo-template components remain under `src/components/` (`hint-row`, `collapsible`, `web-badge`, `external-link`) and are unused by the product flow.
