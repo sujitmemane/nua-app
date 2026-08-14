@@ -8,18 +8,7 @@ The app also tracks a small set of client-side analytics events, persists cart a
 
 ## App Demo
 
-<p align="center">
-  <iframe
-    width="800"
-    height="450"
-    src="https://www.loom.com/embed/d35e3d5de622400a98fef574fb8f560b?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true"
-    title="Nua app walkthrough"
-    frameborder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-    allowfullscreen
-    style="max-width: 100%; border: 0; border-radius: 12px;">
-  </iframe>
-</p>
+
 
 <p align="center">
   <a href="https://www.loom.com/share/d35e3d5de622400a98fef574fb8f560b">
@@ -222,19 +211,6 @@ DummyJSON has no combined search + category URL. When both are set, the app sear
 - List keys: product id (string).
 - `ProductCard` is not wrapped in `React.memo`.
 
-## App Stats
-
-Counted from this repository (not estimated coverage).
-
-| Stat | Value |
-| --- | --- |
-| Screens | 5 (Products, Events, Cart, Product detail, Return policy) |
-| Tab routes | 3 |
-| Component files (`src/**/components`) | 23 |
-| DummyJSON endpoints used | 5 |
-| `src/` TypeScript files | 71 (36 `.ts`, 35 `.tsx`) |
-| Runtime dependencies | 31 |
-| Dev dependencies | 4 |
 
 ## Architecture / Project Structure
 
