@@ -254,8 +254,7 @@ Then open iOS Simulator, Android emulator, or Expo Go.
 ```bash
 npm run ios
 npm run android
-npm run web
-npm run lint
+
 ```
 
 Optional:
@@ -264,7 +263,6 @@ Optional:
 EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
 ```
 
-Dev-only flags (keep off for a normal run): `MOCK_OFFLINE` / `MOCK_SKELETON` in `src/lib/offline-mock.ts`, `PRODUCTS_API_MOCK` in `src/features/products/services/products-mock.ts` (`'off' | '400' | 'timeout'`).
 
 ## Known Limitations
 
