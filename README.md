@@ -2,7 +2,7 @@
 
 A Blinkit-style commerce client built with **Expo SDK 57** and TypeScript.
 
-Product listing with infinite scroll and debounced search, product detail with image carousel and discounted pricing, a persisted cart, offline-aware browsing, an in-app analytics event log, and a Return Policy WebView — the kind of surface area you hit shipping a real grocery app, not a toy CRUD demo.
+Product listing with infinite scroll and debounced search, product detail with image carousel and discounted pricing, a persisted cart, offline-aware browsing, an in-app analytics event log, and a Return Policy WebView.
 
 <table>
 <tr>
@@ -127,12 +127,10 @@ npx expo start
 | Command | What it does |
 | --- | --- |
 | `npx expo start` | Dev server (iOS / Android / Expo Go / web) |
-| `npm test` | Unit tests (includes the search race-condition case) |
+| `npm test` | Search race-condition unit test |
 | `npm run lint` | ESLint via `expo lint` |
 
 **Requirements:** Node 20+, Expo Go or a simulator.
-
-Optional env:
 
 ```bash
 EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
@@ -140,120 +138,120 @@ EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
 
 ---
 
-## Assignment coverage
+## How state is split
 
-| Requirement | Status | Where it lives |
-| --- | --- | --- |
-| Paginated DummyJSON listing | Done | `products-service` + `useInfiniteQuery` |
-| Infinite scroll (no Load More) | Done | `ProductsScreen` `onEndReached` |
-| Debounced search → `/products/search?q=` | Done | `useDebouncedValue` (400ms) |
-| Product detail + image carousel | Done | `ProductDetailScreen` + `ProductImageCarousel` |
-| Discounted price from `discountPercentage` | Done | `getDiscountedPrice` |
-| Cart (Zustand) | Done | `features/cart` |
-| Cart → AsyncStorage | Done | Zustand `persist` (`nua-cart`) |
-| Return Policy WebView | Done | `/return-policy` |
-| Analytics: 4 events + metadata | Done | Events tab + `eventsService` |
-| Offline support | Done | NetInfo banner, first-page cache, guarded actions |
-| **Bonus** retry + exponential backoff | Done | `lib/query-client.ts` |
-| **Bonus** pull-to-refresh vs pagination | Done | `onRefresh` / `fetchNextPage` separated |
-| **Bonus** dark mode + persist | Done | `theme-store` (`nua-theme`) |
-| **Bonus** search race-condition test | Done | `use-products-search-race-test.ts` |
+Two kinds of data, two owners.
 
----
+**TanStack Query** owns anything that comes from DummyJSON: product pages, categories, product detail. It already knows how to cache by key, paginate, retry, abort, and mark data stale. Reimplementing that in a store would be a worse cache.
 
-## Architecture
+**Zustand** owns anything the device is the source of truth for: cart lines, light/dark preference, the in-app event log. Those are sync mutations. A query cache is the wrong shape.
+
+That split is the main trade-off. Context would work for theme, but cart updates from product cards would re-render more of the tree unless you split contexts carefully. Redux is fine; it's just more ceremony than this surface needs. Zustand's selectors keep a product card subscribed only to `quantity` for *that* id, and `persist` maps cart + theme onto AsyncStorage without extra glue.
+
+Analytics is fired from the cart store itself (`addItem` / `increment`), not from each button. The event stays next to the mutation.
+
+Routes in `src/app/` are shells. Screens, queries, and services live under `src/features/`.
 
 ```
 src/
-├── app/                  # Expo Router only — thin route shells
-├── features/
-│   ├── products/         # list, detail, search, cache, WebView
-│   ├── cart/             # Zustand store + cart UI
-│   └── events/           # analytics store, AppState listener, log UI
-├── components/           # shared UI (tabs, banner, toast, themed primitives)
-├── hooks/                # net info, debounce, theme colors
-├── lib/                  # QueryClient, offline mock flag
-├── services/             # shared axios client
-└── theme/                # palette, typography, theme store
+├── app/                 # Expo Router — thin
+├── features/products|cart|events
+├── lib/                 # QueryClient, offline flags
+├── services/            # shared axios instance
+└── theme/               # tokens + persisted preference
 ```
 
-**Server state → TanStack Query.** Products are remote, paginated, and staleable. Query owns caching, retries, abort, and infinite pages.
+---
 
-**Client state → Zustand.** Cart, theme preference, and the analytics log are local, sync, and (for cart/theme) persisted. No provider spaghetti; stores can be called from hooks *or* plain services via `getState()`.
+## Caching
 
-**Routes stay thin.** `src/app/**` re-exports feature screens. Business logic never lives in the router tree.
+Three layers, on purpose. They fail independently.
+
+### 1. In-memory (TanStack Query)
+
+List queries use `staleTime: 60s`. Categories use `5 min` — they almost never change during a session. After staleTime, the UI still shows the last pages while a background refetch runs. `queryKey` is `['products', 'list', { search, category }]`, so “oil” and “All” don’t share a cache with “oil” + Beauty.
+
+`networkMode: 'offlineFirst'` is required for the disk fallback below. Default Query behavior is “don’t run `queryFn` if we think we’re offline.” We *want* the function to run so it can read AsyncStorage.
+
+### 2. Disk (first page only)
+
+On a successful default first page (`search === ''`, category `all`, `skip === 0`), the response is written to AsyncStorage (`nua-products-first-page`).
+
+On a later fetch failure of that same page, the service returns the disk snapshot instead of throwing — unless the request was aborted, or we’re in an API-mock mode (those mocks must still look like failures).
+
+**Why only page 1?** Page 2+ is “load more.” Showing a stale first grid is grocery-app-correct (Zepto/Blinkit still show *something*). Serving a stale page 3 as if it were fresh pagination would lie about `total` / `hasNextPage`. Search and category results are also skipped — they’re too specific to be a useful fallback.
+
+**Trade-off:** prices on that cached page can be stale. The offline banner says so. We don’t persist the whole infinite query to disk; that would need a versioned schema and eviction we don’t have.
+
+### 3. Client persist (not product cache)
+
+| Key | What | Why disk |
+| --- | --- | --- |
+| `nua-cart` | Cart items | Kill-app shouldn’t empty the bag |
+| `nua-theme` | `'light' \| 'dark'` | Preference, then `Appearance.setColorScheme` so native chrome matches |
+
+Events stay in memory. They’re a debug stream, not a ledger.
 
 ---
 
-## Design decisions
+## Retries (exponential backoff)
 
-### Why Zustand (not Context / Redux)
+Transient failures (timeouts, 5xx, network blips) retry up to **5** times. Delay is `min(1000 * 2^attempt, 8000)` — 1s, 2s, 4s, 8s, 8s.
 
-| | Context | Redux | Zustand (chosen) |
-| --- | --- | --- | --- |
-| Boilerplate | Low | High | Low |
-| Re-renders | Easy to over-subscribe | Fine with selectors | Fine with selectors |
-| Call from a non-React service | Awkward | Possible | Natural (`getState()`) |
-| Persist to AsyncStorage | Manual | Extra package | Built-in middleware |
+**4xx is not retried.** A 400 from DummyJSON (or our mock) will fail the same way on attempt 2. Retrying it only delays the error UI. The Retry button is an explicit user action; that’s a new query, not a continuation of the backoff loop.
 
-Cart mutations also fire `add_to_cart` from the store itself — analytics stays next to the action, not scattered across screens.
+Axios timeout is 15s. Combined with backoff, a truly dead network can sit for a while — that’s why the list uses skeletons, not a spinner that looks frozen, and why 4xx short-circuits.
 
-### Search race condition
-
-Fast typing without guards = overlapping DummyJSON requests. A slow earlier response can land *after* a newer one and flash the wrong list.
-
-**Mitigation (two layers):**
-
-1. **Debounce (400ms)** — don’t hit the network on every keystroke.
-2. **AbortSignal** — `useInfiniteQuery` keys on `search`; when the key changes, TanStack Query aborts the previous `queryFn`. That signal is forwarded into axios so the in-flight HTTP call is cancelled, not just ignored in UI state.
-
-Covered by `npm test` — a stale `"a"` request is aborted; `"iphone"` wins.
-
-### Offline
-
-- Connectivity uses **`isConnected !== false`** only. Relying on `isInternetReachable` false-positives offline on iOS Simulator.
-- Query `networkMode: 'offlineFirst'` so `queryFn` still runs offline and can serve the **first-page AsyncStorage cache**.
-- Offline: connection banner, toast on load-more / refresh / retry, product detail navigation blocked. Cart add/remove still works (local state).
-
-### Retries
-
-Failed queries retry with exponential backoff (`1s → 2s → 4s…` capped at 8s). **4xx is not retried** — those are client errors, not transient network flakes.
-
-### DummyJSON quirks
-
-There is no combined `search + category` endpoint. When both are set, the app searches with `limit=0` and filters by `category` client-side. Documented here so reviewers don’t assume a missing API.
+Pull-to-refresh calls `refetch()`. Infinite scroll calls `fetchNextPage()`. They don’t share a “loading” flag: `refreshing={isRefetching && !isPending}` so a page-2 fetch doesn’t yank the list into a pull spinner.
 
 ---
 
-## Features in more detail
+## Search races
 
-### Products
+Type `o` → `oi` → `oil` fast enough and you get three overlapping HTTP calls. If `oi` is slower than `oil`, a naive `.then(setProducts)` flashes the wrong grid.
 
-- Paginated fetch (`limit` / `skip`), infinite scroll, pull-to-refresh
-- Category chips with themed headers
-- Skeleton loading, empty states, error + retry
-- Detail: carousel, brand/category, discounted + strikethrough price, tags, reviews, return-policy link
+Two layers:
 
-### Cart
+1. **Debounce 400ms** — don’t hit the network per keystroke. Cheap, but not sufficient: two *debounced* queries can still overlap if the first is slow.
+2. **AbortSignal** — `useInfiniteQuery` keys on `search`. New key → TanStack Query aborts the previous `queryFn`. That signal is passed into axios, so the socket is cancelled, not just ignored in React state.
 
-- Add / increment / decrement from list and detail
-- Persisted across restarts (`nua-cart`)
-- Subtotal uses discounted unit prices; “saved” amount vs list price
+`npm test` covers this: a hung `"a"` request is aborted; `"iphone"` wins; the stale payload never lands.
 
-### Analytics (in-app Events tab)
+DummyJSON has no `?q=&category=` URL. Combined search + category is “search with `limit=0`, then `filter(product.category === category)`.” Wrong, but the API doesn’t offer the right thing. Pagination in that mode is a single page.
 
-| Event | Fired when |
+---
+
+## Offline
+
+Connectivity is `isConnected !== false`. `isInternetReachable` is a false offline on iOS Simulator even with Wi‑Fi on — we learned that the hard way.
+
+When offline:
+
+- Banner sits in the status-bar strip (header color + dark overlay, not a random error red).
+- Load-more, pull-to-refresh, and product-detail navigation toast and no-op. Detail is a network fetch we don’t disk-cache.
+- Cart +/− still works. That’s local state.
+- First-page cache can still populate the grid via `offlineFirst` + the catch path above.
+
+---
+
+## Theme
+
+`useThemeStore` is the switch (`preference`, `toggle`, persist). `useTheme()` is `Colors[preference]` — paint, not control. `Appearance.setColorScheme` runs on toggle *and* on rehydrate so NativeTabs / status bar don’t stay on the OS scheme after a cold start.
+
+---
+
+## Analytics
+
+In-app Events tab, not a vendor SDK.
+
+| Event | When |
 | --- | --- |
-| `product_viewed` | Product detail mounts with data |
-| `add_to_cart` | Cart store add / increment |
-| `search_performed` | Debounced search query changes |
-| `app_backgrounded` | `AppState` → `background` (root layout) |
+| `product_viewed` | Detail has a product |
+| `add_to_cart` | Store add / increment |
+| `search_performed` | Debounced query changes |
+| `app_backgrounded` | `AppState === 'background'` from root layout |
 
-Each event stores `id`, `type`, `metadata`, and `createdAt` (ISO). Filter pills on the Events screen.
-
-### Theme
-
-Light / dark preference in Zustand, persisted, and synced to `Appearance.setColorScheme` so native chrome (status bar, tabs) follows the toggle — not only JS-painted surfaces.
+Each row is `{ id, type, metadata, createdAt }`.
 
 ---
 
@@ -263,47 +261,22 @@ Light / dark preference in Zustand, persisted, and synced to `Appearance.setColo
 npm test
 ```
 
-Jest via [`jest-expo`](https://docs.expo.dev/develop/unit-testing/) (Expo SDK 57).
+Jest via `jest-expo`. One test on purpose: the search abort path. That’s the bug that looks like “search is flaky” in production.
 
-The race-condition test mocks axios + AsyncStorage and asserts:
+Dev flags (keep off unless you’re screenshotting):
 
-- aborting the stale search rejects with cancel
-- the newer search resolves to the correct products
-- the aborted request never “wins”
-
----
-
-## Dev-only flags
-
-Leave these **off** for a normal demo / review:
-
-| Flag | File | Purpose |
-| --- | --- | --- |
-| `MOCK_OFFLINE` | `src/lib/offline-mock.ts` | Fake airplane mode (banner, cache path, Query offline) |
-| `MOCK_SKELETON` | `src/lib/offline-mock.ts` | Force products grid skeleton (screenshot) |
-| `PRODUCTS_API_MOCK` | `src/features/products/services/products-mock.ts` | `'off'` \| `'400'` \| `'timeout'` for error/retry UX |
+| Flag | File |
+| --- | --- |
+| `MOCK_OFFLINE` | `src/lib/offline-mock.ts` |
+| `MOCK_SKELETON` | same |
+| `PRODUCTS_API_MOCK` (`'off' \| '400' \| 'timeout'`) | `products-mock.ts` |
 
 ---
 
-## Demo
+## What’s next
 
-> **Loom:** _[paste 2–3 min walkthrough link here]_
-
-Suggested video order: browse → search → detail → cart → return policy → events → light/dark toggle → offline.
+Checkout is UI-only. Product detail doesn’t have the list’s retry chrome. Events aren’t persisted. A fuller suite would lock debounce, backoff, and cart rehydrate — not just the race.
 
 ---
-
-## What I’d improve with more time
-
-- Broader test suite: debounce hook, backoff policy, cart persist round-trip
-- Product detail error/retry parity with the list screen
-- Persist analytics events (currently in-memory)
-- Real checkout / order placement (Checkout is UI-only today)
-- Maestro E2E for search → detail → cart → background
-- Tighter commit history before a production PR
-
----
-
-## Stack
 
 Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router · TanStack Query · Axios · Zustand · AsyncStorage · NetInfo · react-native-webview · jest-expo
