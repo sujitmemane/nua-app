@@ -209,7 +209,7 @@ DummyJSON has no combined search + category URL. When both are set, the app sear
 - Events filter list is `useMemo`’d by selected pill.
 - Product thumbnails and carousel images: `expo-image`, `cachePolicy="memory-disk"`.
 - List keys: product id (string).
-- `ProductCard` is not wrapped in `React.memo`.
+- `ProductCard` is wrapped in `React.memo` so a qty change on one cell doesn’t rebuild every card.
 
 
 ## Architecture / Project Structure
@@ -264,6 +264,16 @@ EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
 ```
 
 
+## What I’d improve with more time
+
+- **Offline browsing.** Let people reopen a product they already viewed, and keep the last search/category results on screen — not only the home grid.
+- **Checkout.** Finish the buy flow: confirm order, show a success state, instead of a button that goes nowhere.
+- **Coupons & offers.** Promo codes at checkout, and a simple rewards layer (streaks, offer badges) so the cart feels like a store, not a list.
+- **UI/UX polish.** Tighter spacing, empty/error illustrations, and motion on add-to-cart, tab switches, and list load so the app feels smooth instead of abrupt.
+- **Config-driven UI.** Drive banners, category order, feature flags, and coupon rules from a remote/config file so merchandising doesn’t need an app release.
+- **Events history.** Keep the in-app activity log after the app is killed, same as the cart already does.
+- **Robust tests.** Cover search cancellation, retries, cart persist, and offline paths so those flows stay reliable as the UI grows.
+
 ## Known Limitations
 
 - Checkout does not place an order.
@@ -271,4 +281,3 @@ EXPO_PUBLIC_PRODUCTS_URL=https://dummyjson.com/products
 - Detail, search, and extra pages are not disk-cached; offline users only get the last saved default first page (if any).
 - Combined search + category is client-filtered because DummyJSON has no combined endpoint.
 - Analytics events are not persisted across process death.
-- A few Expo-template components remain under `src/components/` (`hint-row`, `collapsible`, `web-badge`, `external-link`) and are unused by the product flow.

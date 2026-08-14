@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -17,7 +18,7 @@ interface ProductCardProps {
   product: Product;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product }: ProductCardProps) {
   const theme = useTheme();
   const router = useRouter();
   const { isOnline } = useNetInfo();
@@ -120,7 +121,7 @@ export function ProductCard({ product }: ProductCardProps) {
       </Pressable>
     </ThemedView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
