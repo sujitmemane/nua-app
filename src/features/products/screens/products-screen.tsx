@@ -8,9 +8,9 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { eventsService } from '@/features/events';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-
 import { useNetInfo } from '@/hooks/use-net-info';
 import { useTheme } from '@/hooks/use-theme';
+import { useThrottledCallback } from '@/hooks/use-throttled-callback';
 import { MOCK_SKELETON } from '@/lib/offline-mock';
 import { toast } from '@/utils/toast';
 import { CategoryTabs } from '../components/category-tabs';
@@ -57,6 +57,17 @@ export function ProductsScreen() {
     setCategory(next);
   }
 
+  const handleEndReached = useThrottledCallback(() => {
+    if (showSkeleton) return;
+    if (!isOnline) {
+      toast.error("You're offline", "Can't load more. Please connect to the internet.");
+      return;
+    }
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, 800);
+
   return (
     <ThemedView style={styles.container}>
       <ConnectionBanner headerColor={headerTheme.background} />
@@ -90,16 +101,7 @@ export function ProductsScreen() {
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ProductCard product={item} />}
         contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + Spacing.four }]}
-        onEndReached={() => {
-          if (showSkeleton) return;
-          if (!isOnline) {
-            toast.error("You're offline", "Can't load more. Please connect to the internet.");
-            return;
-          }
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
-          }
-        }}
+        onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         onRefresh={() => {
           if (showSkeleton) return;
